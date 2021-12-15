@@ -1,23 +1,36 @@
-import { useState, Fragment } from "react";
+import { useState, useEffect } from "react";
 
-const Timer = () => {
-  const [allowedHours, setAllowedHours] = useState(1);
-  const [allowedMinutes, setAllowedMinutes] = useState(20);
-  const [allowedSeconds, setAllowedSeconds] = useState(0);
+const Timer = (props) => {
+  const [totalSeconds, setTotalSeconds] = useState(props.minutes * 60);
 
-  const startTimerHandler = () => {};
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor((totalSeconds % 3600) % 60);
+  const displayM = minutes < 10 ? "0" + minutes : minutes;
+  const displayS = seconds < 10 ? "0" + seconds : seconds;
 
-  return (
-    <Fragment>
-      <h1>Remaining time</h1>
-      <div className="timer">
-        <div className="hour element">{allowedHours}</div>
-        <span className="separator">:</span>
-        <div className="minute element">{allowedMinutes}</div>
-        <span className="separator">:</span>
-        <div className="second element">{allowedSeconds}</div>
-      </div>
-    </Fragment>
-  );
+  let resetPerformed = false;
+
+  useEffect(() => {
+    // Set new Timer
+    setTotalSeconds(props.minutes * 60);
+    // Reset Timer
+    if (!resetPerformed && props.reset) {
+      resetPerformed = true;
+      setTotalSeconds(props.minutes * 60);
+    }
+  }, [props.minutes, props.examPart, props.reset]);
+
+  // We are using useEffect with no dependencies because we want it to run always
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (totalSeconds >= 1 && props.isPlaying) {
+        setTotalSeconds((prevTotalSeconds) => prevTotalSeconds - 1);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  });
+
+  return <p>{hours + "h  " + displayM + "min  " + displayS + "sec"}</p>;
 };
 export default Timer;

@@ -1,11 +1,150 @@
 *{
   margin: 0;
   padding: 0;
+  font-family: sans-serif;
 }
 .App {
-  text-align: center;
-  height: 100vh;
-  margin: 40px;
   display: flex;
   flex-direction: column;
+  text-align: center;
+  height: 100vh;
+}
+
+.app-header{
+  display: flex;
+  height: auto;
+  justify-content: space-between;
+  margin: 0 40px;
+}
+.wrapper{
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: center;
+  background-color: whitesmoke;
+}
+
+.reset-btn, .play-btn{
+  position: relative;
+  left: 40px;
+  margin: 10px;
+  padding: 10px;
+  font-size: 18px;
+  border: none;
+  border-radius: 7px;
+  width: 100px;
+  cursor: pointer;
+}
+.btn-reset{
+  background-color: #464646;
+}
+
+.play-btn{
+  background-color: #f59f10;
+  color: white;
+}
+
+.wrapper .controls button:hover,
+.wrapper .controls button:active {
+  background-color: #f1b148;
+}
+
+.content{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 48px;
+  margin: 0 40px;
+}
+
+.content .lables,
+.content .values{
+  display: flex;
+  flex-direction: column;
+}
+.content .lables {
+  margin-right: 1.5rem;
+}
+
+.content .lables p {
+  text-align: right;
+  font-weight: 500;
+}
+.content .values p {
+  text-align: left;
+  font-weight: 300;
+}
+
+.settings{
+  padding: 7px 45px 20px 40px;
+}
+.settings-header{
+  margin-bottom: 20px;
+}
+.settings-header h2{
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.modal-form .form-control{
+  display: flex;
+  justify-content: space-between;
+  font-size: 24px;
+  margin-top: 10px;
+}
+
+.modal-form .form-control:last-child{
+  margin-top: 20px;
+  margin-bottom: -15px;
+}
+
+.modal-form .form-control select{
+  font-size: 17px;
+}
+.modal-form .form-control select:active,
+.modal-form .form-control select:focus{
+  border: #f59f10 1px solid;
+}
+
+.settings-btn{
+  cursor: pointer;
+
+}
+.btn{
+  cursor: pointer;
+  padding: 7px 15px;
+  border: none;
+  border-radius: 5px;
+  font-size: 17px;
+}
+.btn-save{
+  background-color: #f59f10;
+  color: white;
+}
+.btn-save:active,
+.btn-save:hover{
+  background-color: #f1b148;
+}
+.btn-save:disabled{
+  background-color: #ebebeb;
+  color: #555555;
+  cursor: not-allowed;
+}
+
+footer{
+  border-top: #5c5c5c 0.5px solid;
+  padding: 0 40px;
+  background-color: whitesmoke;
+}
+footer a {
+  text-decoration: none;
+  color: black;
+}
+.footer{
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+.footer .element {
+  margin-top: 20px;
 }
