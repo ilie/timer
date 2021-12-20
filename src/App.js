@@ -36,6 +36,9 @@ function App() {
   const showTimerHandler = (value) => {
     setShowTimer(value);
   };
+  const toggleTimerHandler = () => {
+    setShowTimer((showTimer) => !showTimer);
+  };
 
   return (
     <div className="App">
@@ -57,7 +60,12 @@ function App() {
         examTimeInMinutes={examTimeInMinutes}
         showTimer={showTimer}
       />
-      <Footer click={showModalHandler} />
+      <Footer
+        click={showModalHandler}
+        showTimer={showTimer}
+        toggleShowTimer={toggleTimerHandler}
+        examName={examName}
+      />
     </div>
   );
 }

@@ -106,10 +106,6 @@
   border: #f59f10 1px solid;
 }
 
-.settings-btn{
-  cursor: pointer;
-
-}
 .btn{
   cursor: pointer;
   padding: 7px 15px;
@@ -147,4 +143,13 @@ footer a {
 }
 .footer .element {
   margin-top: 20px;
+}
+.footer .settings{
+  width: 250px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-btn{
+  cursor: pointer;
 }
