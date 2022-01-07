@@ -1,6 +1,6 @@
 import React from "react";
 import VLEC from "../../Assets/img/Virginia_Lyons_H.svg";
-import CAMBRIDGE from "../../Assets/img/Authorised_Platinum_Exam_centre_logo.svg";
+import CAMBRIDGE from "../../Assets/img/Cambridge_Platinum_Exam_Centre.svg";
 const Header = () => {
   return (
     <header className="app-header">
