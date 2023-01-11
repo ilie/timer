@@ -6,9 +6,10 @@ const Checkbox = (props) => {
     <form onSubmit={submitHandler}>
       <label htmlFor={props.name}>{props.label}</label>
       <input
+        disabled
         type="checkbox"
         name="checked"
-        checked={props.checked}
+        defaultChecked={props.checked}
         id="checkbox"
         onClick={props.onCheck}
       />

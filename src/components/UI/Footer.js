@@ -7,7 +7,7 @@ const Footer = (props) => {
   return (
     <footer>
       <div className="footer">
-        <a href="https://www.vlec.es" target="_blank">
+        <a href="https://www.vlec.es">
           <p>Virginia Lyons Exam Centre © {fullYear}</p>
         </a>
         <div className="settings">

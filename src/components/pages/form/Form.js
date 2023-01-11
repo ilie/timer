@@ -1,4 +1,4 @@
-import { useState, Fragment, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getExamParts, examOptions, examPartOptions } from "./Helpers";
 
 const Form = (props) => {
@@ -9,7 +9,8 @@ const Form = (props) => {
   const [selectedExamPartDetails, setSelectedExamPartDetails] = useState();
   const [selectExamPartTouched, setSelectExamPartTouched] = useState(false);
 
-  const disabled = !!selectExamTouched && !!selectExamPartTouched;
+  const disabled = !!selectExamPartTouched && !!selectExamPartTouched;
+  const examTypeRef = useRef("");
 
   useEffect(() => {
     if (selectExamTouched) {
@@ -32,23 +33,45 @@ const Form = (props) => {
   };
 
   const onSubmitHandler = (event) => {
+    let showTimer = false;
+    if (
+      examTypeRef.current.value === "PB" &&
+      selectedExamPart !== "Listening"
+    ) {
+      showTimer = true;
+      console.log("is true");
+    }
+    sessionStorage.setItem("examType", examTypeRef.current.value);
     event.preventDefault();
     props.onExamName(selectedExam);
     props.onExamPart(selectedExamPart);
     props.onExamTime(selectedExamPartDetails.time);
     props.onExamTimeInMinutes(selectedExamPartDetails.minutes);
-    props.onShowTimer(selectedExamPartDetails.showTimer);
+    props.onShowTimer(showTimer);
     props.onHideModal();
   };
 
   return (
     <form className="modal-form" onSubmit={onSubmitHandler}>
       <div className="form-control">
+        <label htmlFor="examType">Type: </label>
+        <select
+          name="examType"
+          id="examType"
+          className="exam-type-option"
+          ref={examTypeRef}
+        >
+          <option value="">--- Select from the dropdown ---</option>
+          <option value="CB">CB (Computer Based)</option>
+          <option value="PB">PB (Paper Based)</option>
+        </select>
+      </div>
+      <div className="form-control">
         <label htmlFor="examName">Exam: </label>
         <select
+          className="exam-name-option"
           name="examName"
           id="examName"
-          className="exam-name-option"
           onChange={onChangeExamHandler}
         >
           <option key="00000" value="">

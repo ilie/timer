@@ -22,7 +22,11 @@ function App() {
   };
 
   const examNameHandler = (value) => {
-    setExamName(value);
+    setExamName(
+      !!sessionStorage.getItem("examType")
+        ? sessionStorage.getItem("examType") + " " + value
+        : value
+    );
   };
   const examPartHandler = (value) => {
     setExamPart(value);
