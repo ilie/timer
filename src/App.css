@@ -1,4 +1,4 @@
-*{
+* {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
@@ -10,13 +10,14 @@
   height: 100vh;
 }
 
-.app-header{
+.app-header {
   display: flex;
   height: auto;
   justify-content: space-between;
   margin: 0 40px;
+  padding: 20px 0;
 }
-.wrapper{
+.wrapper {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -24,7 +25,8 @@
   background-color: whitesmoke;
 }
 
-.reset-btn, .play-btn{
+.reset-btn,
+.play-btn {
   position: relative;
   left: 40px;
   margin: 10px;
@@ -35,11 +37,11 @@
   width: 100px;
   cursor: pointer;
 }
-.btn-reset{
+.btn-reset {
   background-color: #464646;
 }
 
-.play-btn{
+.play-btn {
   background-color: #f59f10;
   color: white;
 }
@@ -49,7 +51,7 @@
   background-color: #f1b148;
 }
 
-.content{
+.content {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -58,7 +60,7 @@
 }
 
 .content .lables,
-.content .values{
+.content .values {
   display: flex;
   flex-direction: column;
 }
@@ -75,59 +77,59 @@
   font-weight: 300;
 }
 
-.settings{
+.settings {
   padding: 7px 45px 20px 40px;
 }
-.settings-header{
+.settings-header {
   margin-bottom: 20px;
 }
-.settings-header h2{
+.settings-header h2 {
   font-size: 28px;
   font-weight: 500;
 }
 
-.modal-form .form-control{
+.modal-form .form-control {
   display: flex;
   justify-content: space-between;
   font-size: 24px;
   margin-top: 10px;
 }
 
-.modal-form .form-control:last-child{
+.modal-form .form-control:last-child {
   margin-top: 20px;
   margin-bottom: -15px;
 }
 
-.modal-form .form-control select{
+.modal-form .form-control select {
   font-size: 17px;
 }
 .modal-form .form-control select:active,
-.modal-form .form-control select:focus{
+.modal-form .form-control select:focus {
   border: #f59f10 1px solid;
 }
 
-.btn{
+.btn {
   cursor: pointer;
   padding: 7px 15px;
   border: none;
   border-radius: 5px;
   font-size: 17px;
 }
-.btn-save{
+.btn-save {
   background-color: #f59f10;
   color: white;
 }
 .btn-save:active,
-.btn-save:hover{
+.btn-save:hover {
   background-color: #f1b148;
 }
-.btn-save:disabled{
+.btn-save:disabled {
   background-color: #ebebeb;
   color: #555555;
   cursor: not-allowed;
 }
 
-footer{
+footer {
   border-top: #5c5c5c 0.5px solid;
   padding: 0 40px;
   background-color: whitesmoke;
@@ -136,7 +138,7 @@ footer a {
   text-decoration: none;
   color: black;
 }
-.footer{
+.footer {
   display: flex;
   justify-content: space-between;
   margin: 20px 0;
@@ -144,12 +146,12 @@ footer a {
 .footer .element {
   margin-top: 20px;
 }
-.footer .settings{
+.footer .settings {
   width: 250px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.settings-btn{
+.settings-btn {
   cursor: pointer;
 }
