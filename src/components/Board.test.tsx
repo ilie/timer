@@ -161,4 +161,31 @@ describe("component advance", () => {
     expect(within(rowOf("Time")).getByText("1h 20min")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
   });
+  it("switches every column to short names at the compact threshold", () => {
+    seed([
+      paperSession("one", "B1 Preliminary", 0),
+      { ...paperSession("two", "B2 First", 0), mode: "digital" },
+    ]);
+
+    const { unmount } = render(<Board />);
+
+    expect(document.querySelectorAll("[data-density]")).toHaveLength(1);
+    expect(within(rowOf("Exam")).getByText("B1 Preliminary")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("B2 First Digital")).toBeInTheDocument();
+    unmount();
+
+    seed([
+      paperSession("one", "B1 Preliminary", 0),
+      { ...paperSession("two", "B2 First", 0), mode: "digital" },
+      { ...paperSession("three", "Linguaskill General", 0), mode: "digital" },
+    ]);
+
+    render(<Board />);
+
+    expect(document.querySelectorAll("[data-density]")).toHaveLength(1);
+    expect(within(rowOf("Exam")).getByText("PET")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("FCE Dg")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("Lsk Gen")).toBeInTheDocument();
+    expect(within(rowOf("Part")).getByText("Reading & UoE")).toBeInTheDocument();
+  });
 });
