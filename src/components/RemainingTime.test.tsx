@@ -50,6 +50,17 @@ const advance = (ms: number): void => {
 
 const noThresholdHandling = (): void => {};
 
+const renderedRemaining = (): string => {
+  const value = screen.getByRole("timer").textContent;
+  if (value === null) {
+    throw new Error("No countdown rendered");
+  }
+  return value;
+};
+
+const reservedRenderings = (): string[] =>
+  [...document.querySelectorAll("[data-reservation]")].map((node) => node.textContent ?? "");
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(EXAM_START);
@@ -88,7 +99,7 @@ describe("anchoring", () => {
     advance(TEN_MINUTES_MS);
 
     expect(remainingMs(timer, Date.now())).toBe(READING_MS - 600_000);
-    expect(screen.getByText(formatRemaining(READING_MS - 600_000))).toBeInTheDocument();
+    expect(renderedRemaining()).toBe(formatRemaining(READING_MS - 600_000));
   });
 
   it("shows the whole allowed time while the session is idle", () => {
@@ -100,7 +111,7 @@ describe("anchoring", () => {
       />,
     );
 
-    expect(screen.getByText(formatRemaining(READING_MS))).toBeInTheDocument();
+    expect(renderedRemaining()).toBe(formatRemaining(READING_MS));
   });
 });
 
@@ -142,5 +153,96 @@ describe("threshold crossings", () => {
     );
 
     expect(crossings).toEqual([]);
+  });
+});
+
+describe("width reservation", () => {
+  it("reserves the same renderings whatever the value shows", () => {
+    const durationMs = 90 * 60_000;
+    const values = [durationMs, 600_000, 582_000, 0];
+    const reservations = values.map((remaining) => {
+      const view = render(
+        <RemainingTime
+          timer={{ status: "running", endsAt: Date.now() + remaining }}
+          durationMs={durationMs}
+          onThresholdCross={noThresholdHandling}
+        />,
+      );
+      const reserved = reservedRenderings();
+      view.unmount();
+      return reserved;
+    });
+
+    expect(reservations[0]).toContain("1h 10min 00sec");
+    for (const reserved of reservations) {
+      expect(reserved).toEqual(reservations[0]);
+    }
+  });
+
+  it("marks each threshold on the countdown cell", () => {
+    const durationMs = 20 * 60_000;
+    const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
+      const view = render(
+        <RemainingTime
+          timer={{ status: "running", endsAt: Date.now() + remaining }}
+          durationMs={durationMs}
+          onThresholdCross={noThresholdHandling}
+        />,
+      );
+      const state = document.querySelector("[data-state]")?.getAttribute("data-state");
+      view.unmount();
+      return state;
+    });
+
+    expect(states).toEqual(["normal", "warning", "critical", "zero"]);
+    expect(formatRemaining(0)).toBe("0min 00sec");
+  });
+});
+
+describe("never counting upward", () => {
+  it("never shows more than the allowed time when a stale sample meets a fresh start", () => {
+    seedIdleReadingSession();
+    const view = render(
+      <RemainingTime
+        timer={{ status: "idle" }}
+        durationMs={READING_MS}
+        onThresholdCross={noThresholdHandling}
+      />,
+    );
+
+    expect(renderedRemaining()).toBe("1h 15min 00sec");
+
+    act(() => {
+      vi.setSystemTime(EXAM_START.getTime() + 200);
+    });
+    startSession("reading");
+    const started = runningTimerOf("reading");
+
+    view.rerender(
+      <RemainingTime
+        timer={started}
+        durationMs={READING_MS}
+        onThresholdCross={noThresholdHandling}
+      />,
+    );
+
+    expect(renderedRemaining()).toBe("1h 15min 00sec");
+  });
+
+  it("never ticks upward across a run", () => {
+    const durationMs = 12 * 60_000;
+    const timer: TimerState = { status: "running", endsAt: Date.now() + durationMs };
+    render(
+      <RemainingTime timer={timer} durationMs={durationMs} onThresholdCross={noThresholdHandling} />,
+    );
+
+    let previous = remainingMs(timer, Date.now());
+    for (let step = 0; step < 4 * 60; step += 1) {
+      advance(250);
+      const current = remainingMs(timer, Date.now());
+      expect(current).toBeLessThanOrEqual(previous);
+      previous = current;
+      expect(renderedRemaining()).toBe(formatRemaining(Math.min(current, durationMs)));
+    }
   });
 });

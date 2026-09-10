@@ -1,7 +1,8 @@
+import { exams } from "../config/exams";
 import type { Exam, Mode, Qualifier } from "../config/exams";
 import { PART_SHORT_NAMES } from "../config/partNames";
 import { WARNING_MS } from "../config/thresholds";
-import { COMPACT_FROM_SESSIONS } from "../config/board";
+import { COMPACT_FROM_SESSIONS, MAX_EXTRA_MINUTES } from "../config/board";
 
 export type Density = "full" | "compact";
 
@@ -9,8 +10,23 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
+const SECONDS_PER_HOUR = 3600;
 
 const shortPartNames: Record<string, string> = PART_SHORT_NAMES;
+
+export type RemainingScale = "full" | "small";
+
+export type RemainingSegment = {
+  scale: RemainingScale;
+  text: string;
+};
+
+const full = (text: string): RemainingSegment => ({ scale: "full", text });
+
+const small = (text: string): RemainingSegment => ({ scale: "small", text });
+
+const joinSegments = (segments: readonly RemainingSegment[]): string =>
+  segments.map((segment) => segment.text).join("");
 
 const formatMinutes = (minutes: number): string => {
   const hours = Math.floor(minutes / MINUTES_PER_HOUR);
@@ -36,18 +52,84 @@ export const formatAllowedTime = (minutes: number, qualifier: Qualifier): string
   }
 };
 
-export const formatRemaining = (ms: number): string => {
+export const remainingSegments = (ms: number): RemainingSegment[] => {
   const clamped = Math.max(0, ms);
-  if (clamped > WARNING_MS) {
-    return formatMinutes(Math.ceil(clamped / MS_PER_MINUTE));
-  }
   const totalSeconds = Math.ceil(clamped / MS_PER_SECOND);
-  const minutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE);
+  const hours = Math.floor(totalSeconds / SECONDS_PER_HOUR);
+  const minutes = Math.floor((totalSeconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
   const seconds = totalSeconds % SECONDS_PER_MINUTE;
-  return `${minutes}min ${String(seconds).padStart(2, "0")}sec`;
+  const secondsDigits = clamped > WARNING_MS ? small : full;
+  const leading = hours === 0 ? [] : [full(String(hours)), small("h ")];
+  return [
+    ...leading,
+    full(String(minutes)),
+    small("min "),
+    secondsDigits(String(seconds).padStart(2, "0")),
+    small("sec"),
+  ];
 };
 
-export const widestRemainingString = (): string => formatRemaining(WARNING_MS);
+export const formatRemaining = (ms: number): string => joinSegments(remainingSegments(ms));
+
+const longestPartMinutes = Math.max(
+  ...exams.flatMap((exam) => exam.examParts.map((part) => part.minutes)),
+);
+
+export const MAX_REMAINING_MS = (longestPartMinutes + MAX_EXTRA_MINUTES) * MS_PER_MINUTE;
+
+const SMALL_SCALE_WIDTH = 0.5;
+
+const estimatedWidth = (segments: readonly RemainingSegment[]): number =>
+  segments.reduce(
+    (total, segment) =>
+      total + segment.text.length * (segment.scale === "full" ? 1 : SMALL_SCALE_WIDTH),
+    0,
+  );
+
+const shapeOf = (segments: readonly RemainingSegment[]): string =>
+  segments.map((segment) => `${segment.scale}:${segment.text.length}`).join("|");
+
+const candidateValues = (upperBoundMs: number): number[] => {
+  const bound = Math.max(0, upperBoundMs);
+  const lastMinute = Math.floor(bound / MS_PER_MINUTE);
+  const values: number[] = [];
+  for (let minute = 0; minute <= lastMinute; minute += 1) {
+    const wholeMinute = minute * MS_PER_MINUTE;
+    values.push(wholeMinute);
+    const almostNextMinute = wholeMinute + MS_PER_MINUTE - MS_PER_SECOND;
+    if (almostNextMinute <= bound) {
+      values.push(almostNextMinute);
+    }
+  }
+  values.push(bound);
+  return values;
+};
+
+export const reservationSegments = (upperBoundMs: number): RemainingSegment[][] => {
+  const byShape = new Map<string, RemainingSegment[]>();
+  for (const value of candidateValues(upperBoundMs)) {
+    const segments = remainingSegments(value);
+    const shape = shapeOf(segments);
+    const known = byShape.get(shape);
+    if (known === undefined || estimatedWidth(segments) > estimatedWidth(known)) {
+      byShape.set(shape, segments);
+    }
+  }
+  return [...byShape.values()];
+};
+
+export const widestRemainingSegments = (upperBoundMs: number): RemainingSegment[] => {
+  let widest = remainingSegments(0);
+  for (const candidate of reservationSegments(upperBoundMs)) {
+    if (estimatedWidth(candidate) > estimatedWidth(widest)) {
+      widest = candidate;
+    }
+  }
+  return widest;
+};
+
+export const widestRemainingString = (): string =>
+  joinSegments(widestRemainingSegments(MAX_REMAINING_MS));
 
 export const partLabel = (partName: string, density: Density): string => {
   if (density === "full") {

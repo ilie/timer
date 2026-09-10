@@ -1,32 +1,15 @@
 import React from "react";
-import GearIcon from "../../Assets/img/gear-icon.svg";
-import Checkbox from "./Checkbox";
 
-const Footer = (props) => {
+const Footer = () => {
   const fullYear = new Date().getFullYear();
   return (
-    <footer>
-      <div className="footer">
-        <a href="https://www.vlec.es">
-          <p>Virginia Lyons Exam Centre © {fullYear}</p>
-        </a>
-        <div className="settings">
-          {props.examName !== "" ? (
-            <Checkbox
-              name="showTimer"
-              label="Show Remaining Time "
-              checked={props.showTimer}
-              onCheck={props.toggleShowTimer}
-            />
-          ) : null}
-          <img
-            className="settings-btn"
-            src={GearIcon}
-            alt="Settings"
-            onClick={props.click}
-          />
-        </div>
-      </div>
+    <footer className="shrink-0 bg-white px-8 py-2">
+      <a
+        className="font-medium text-vlec-blue-900 no-underline hover:text-vlec-blue-700"
+        href="https://www.vlec.es"
+      >
+        <p>Virginia Lyons Exam Centre © {fullYear}</p>
+      </a>
     </footer>
   );
 };

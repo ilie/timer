@@ -9,6 +9,7 @@ import {
   pauseSession,
   removeSession,
   sessionDurationMs,
+  setCentreNumber,
   setClockJumpDetected,
   setSessionConfig,
   startSession,
@@ -370,19 +371,56 @@ describe("session lifecycle", () => {
     ]);
     const before = getSnapshot();
 
-    addSession();
+    addSession({ examName: "B2 First", partIndex: 0, mode: "paper", extraMinutes: 0 });
 
     expect(getSnapshot().sessions).toHaveLength(4);
     expect(Object.is(before, getSnapshot())).toBe(true);
   });
 
-  it("adds sessions up to the cap with distinct ids", () => {
-    addSession();
-    addSession();
+  it("adds sessions up to the cap with distinct ids and the chosen configuration", () => {
+    addSession({ examName: "B2 First", partIndex: 1, mode: "paper", extraMinutes: 0 });
+    addSession({ examName: "Linguaskill General", partIndex: 0, mode: "digital", extraMinutes: 15 });
 
     const ids = getSnapshot().sessions.map((session) => session.id);
     expect(ids).toHaveLength(2);
     expect(new Set(ids).size).toBe(2);
+    expect(getSnapshot().sessions.map((session) => session.examName)).toEqual([
+      "B2 First",
+      "Linguaskill General",
+    ]);
+    expect(getSnapshot().sessions[1]).toMatchObject({
+      partIndex: 0,
+      mode: "digital",
+      extraMinutes: 15,
+    });
+  });
+
+  it("keeps a running countdown when the very same configuration is saved again", () => {
+    seed([idleSession]);
+    startSession("reading");
+    const running = sessionOf("reading")?.timer;
+
+    setSessionConfig("reading", {
+      examName: "B2 First",
+      partIndex: 0,
+      mode: "paper",
+      extraMinutes: 0,
+    });
+
+    expect(sessionOf("reading")?.timer).toEqual(running);
+  });
+
+  it("persists an edited centre number and leaves the sessions alone", () => {
+    seed([idleSession]);
+
+    setCentreNumber("ES999");
+
+    expect(getSnapshot().centreNumber).toBe("ES999");
+    expect(getSnapshot().sessions).toHaveLength(1);
+
+    hydrateFromStorage();
+
+    expect(getSnapshot().centreNumber).toBe("ES999");
   });
 
   it("leaves the other sessions' end times untouched when one is removed", () => {

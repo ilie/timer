@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 import { exams } from "../config/exams";
 import type { Exam } from "../config/exams";
 import {
+  MAX_REMAINING_MS,
   composeExamLabel,
   densityFor,
   formatAllowedTime,
   formatRemaining,
   partLabel,
+  remainingSegments,
   widestRemainingString,
 } from "./format";
+import type { RemainingSegment } from "./format";
 
 const findExam = (examName: string): Exam => {
   const exam = exams.find((candidate) => candidate.examName === examName);
@@ -34,21 +37,70 @@ describe("formatAllowedTime", () => {
   });
 });
 
+const DIGIT_WIDTH = 0.6;
+const LETTER_WIDTH = 0.55;
+const SPACE_WIDTH = 0.28;
+const SMALL_SCALE = 0.5;
+
+const characterWidth = (character: string): number => {
+  if (character === " ") {
+    return SPACE_WIDTH;
+  }
+  return /\d/.test(character) ? DIGIT_WIDTH : LETTER_WIDTH;
+};
+
+const renderedWidth = (segments: readonly RemainingSegment[]): number =>
+  segments.reduce((total, segment) => {
+    const scale = segment.scale === "full" ? 1 : SMALL_SCALE;
+    return total + [...segment.text].reduce((run, character) => run + characterWidth(character), 0) * scale;
+  }, 0);
+
+const segmentsRendering = (rendering: string): RemainingSegment[] => {
+  for (let ms = 0; ms <= MAX_REMAINING_MS; ms += 1000) {
+    if (formatRemaining(ms) === rendering) {
+      return remainingSegments(ms);
+    }
+  }
+  throw new Error(`No value renders ${rendering}`);
+};
+
 describe("formatRemaining", () => {
   it.each([
-    [5_400_000, "1h 30min"],
-    [4_800_000, "1h 20min"],
-    [2_699_000, "45min"],
-    [600_001, "11min"],
+    [5_400_000, "1h 30min 00sec"],
+    [4_800_000, "1h 20min 00sec"],
+    [2_699_000, "44min 59sec"],
+    [600_001, "10min 01sec"],
     [600_000, "10min 00sec"],
     [582_000, "9min 42sec"],
+    [300_000, "5min 00sec"],
+    [1, "0min 01sec"],
     [0, "0min 00sec"],
   ])("formats %i ms as %s", (ms, expected) => {
     expect(formatRemaining(ms)).toBe(expected);
   });
 
-  it("reports the widest string it can produce", () => {
-    expect(widestRemainingString()).toBe("10min 00sec");
+  it("never understates the time left, rounding part seconds up", () => {
+    expect(formatRemaining(1)).toBe("0min 01sec");
+    expect(formatRemaining(999)).toBe("0min 01sec");
+    expect(formatRemaining(1000)).toBe("0min 01sec");
+    expect(formatRemaining(1001)).toBe("0min 02sec");
+    expect(formatRemaining(3_599_999)).toBe("1h 0min 00sec");
+  });
+
+  it("shrinks the seconds above ten minutes and sets them full size at or below", () => {
+    const above = remainingSegments(600_001);
+    const atThreshold = remainingSegments(600_000);
+
+    expect(above.at(-2)).toEqual({ scale: "small", text: "01" });
+    expect(atThreshold.at(-2)).toEqual({ scale: "full", text: "00" });
+  });
+
+  it("reports a widest string no producible value renders wider than", () => {
+    const reserved = renderedWidth(segmentsRendering(widestRemainingString()));
+
+    for (let ms = 0; ms <= MAX_REMAINING_MS; ms += 1000) {
+      expect(renderedWidth(remainingSegments(ms))).toBeLessThanOrEqual(reserved);
+    }
   });
 });
 

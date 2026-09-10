@@ -366,18 +366,13 @@ const unusedSessionId = (sessions: readonly Session[]): string => {
   return `session-${index}`;
 };
 
-const DEFAULT_EXAM = exams[0];
-
-export const addSession = (): void => {
+export const addSession = (config: SessionConfig): void => {
   if (snapshot.sessions.length >= MAX_SESSIONS) {
     return;
   }
   const session: Session = {
     id: unusedSessionId(snapshot.sessions),
-    examName: DEFAULT_EXAM.examName,
-    partIndex: 0,
-    mode: DEFAULT_EXAM.modes[0],
-    extraMinutes: 0,
+    ...config,
     timer: reset(),
   };
   commit({ ...snapshot, sessions: [...snapshot.sessions, session] });
@@ -391,8 +386,23 @@ export const removeSession = (id: string): void => {
   commit({ ...snapshot, sessions });
 };
 
+const matchesConfig = (session: Session, config: SessionConfig): boolean =>
+  session.examName === config.examName &&
+  session.partIndex === config.partIndex &&
+  session.mode === config.mode &&
+  session.extraMinutes === config.extraMinutes;
+
 export const setSessionConfig = (id: string, config: SessionConfig): void => {
-  replaceSession(id, (session) => ({ ...session, ...config, timer: reset() }));
+  replaceSession(id, (session) =>
+    matchesConfig(session, config) ? session : { ...session, ...config, timer: reset() },
+  );
+};
+
+export const setCentreNumber = (centreNumber: string): void => {
+  if (snapshot.centreNumber === centreNumber) {
+    return;
+  }
+  commit({ ...snapshot, centreNumber });
 };
 
 export const advanceComponent = (id: string): void => {
@@ -403,10 +413,6 @@ export const advanceComponent = (id: string): void => {
     }
     return { ...session, partIndex: nextPartIndex, timer: reset() };
   });
-};
-
-export const setOnlySession = (session: Session): void => {
-  commit({ ...snapshot, sessions: [session] });
 };
 
 export const setClockJumpDetected = (detected: boolean): void => {

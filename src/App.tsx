@@ -1,90 +1,58 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Header from "./components/UI/Header";
-import Settings from "./components/pages/Settings";
-import Modal from "./components/UI/Modal";
 import Footer from "./components/UI/Footer";
 import { Board } from "./components/Board";
+import { BoardSettingsDialog } from "./components/BoardSettingsDialog";
+import { SessionDialog } from "./components/SessionDialog";
+import type { SessionDialogTarget } from "./components/SessionDialog";
 import { useClockJump } from "./hooks/useClockJump";
-import { exams } from "./config/exams";
-import type { Mode } from "./config/exams";
-import { reset } from "./lib/timer";
-import { getSnapshot, setOnlySession } from "./store/boardStore";
 
-const BRIDGED_SESSION_ID = "bridged-session";
+const APP_CLASSES =
+  "flex h-screen flex-col overflow-hidden bg-white text-linguaskill-slate-900";
 
-const EXTRA_MINUTES = 0;
+const MAIN_CLASSES = "flex min-h-0 flex-1 flex-col px-3 pb-2 pt-1";
 
 function App() {
-  const [showModal, setShowModal] = useState(false);
-  const chosenExamName = useRef("");
-  const chosenMode = useRef<Mode>("paper");
+  const [sessionDialogTarget, setSessionDialogTarget] = useState<SessionDialogTarget | null>(null);
+  const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
 
   useClockJump();
 
-  function handleHideModal() {
-    setShowModal(false);
+  function handleAddSession() {
+    setSessionDialogTarget({ kind: "add" });
   }
 
-  function handleShowModal() {
-    setShowModal(true);
+  function handleEditSession(sessionId: string) {
+    setSessionDialogTarget({ kind: "edit", sessionId });
   }
 
-  function handleExamType(value: string) {
-    chosenMode.current = value === "CB" ? "digital" : "paper";
+  function handleCloseSessionDialog() {
+    setSessionDialogTarget(null);
   }
 
-  function handleExamName(value: string) {
-    chosenExamName.current = value;
+  function handleOpenBoardSettings() {
+    setBoardSettingsOpen(true);
   }
 
-  function handleExamPart(value: string) {
-    const examName = chosenExamName.current;
-    const exam = exams.find((candidate) => candidate.examName === examName);
-    if (exam === undefined) {
-      return;
-    }
-    const partIndex = exam.examParts.findIndex((part) => part.name === value);
-    if (partIndex < 0) {
-      return;
-    }
-    const mode = chosenMode.current;
-    const current = getSnapshot().sessions.find((session) => session.id === BRIDGED_SESSION_ID);
-    const sameConfiguration =
-      current !== undefined &&
-      current.examName === examName &&
-      current.partIndex === partIndex &&
-      current.mode === mode &&
-      current.extraMinutes === EXTRA_MINUTES;
-    setOnlySession({
-      id: BRIDGED_SESSION_ID,
-      examName,
-      partIndex,
-      mode,
-      extraMinutes: EXTRA_MINUTES,
-      timer: sameConfiguration ? current.timer : reset(),
-    });
+  function handleCloseBoardSettings() {
+    setBoardSettingsOpen(false);
   }
-
-  function ignoreSupersededFormValue() {}
 
   return (
-    <div className="App">
-      <Modal showModal={showModal} click={handleHideModal}>
-        <Settings
-          onExamType={handleExamType}
-          onExamName={handleExamName}
-          onExamPart={handleExamPart}
-          onExamTime={ignoreSupersededFormValue}
-          onExamTimeInMinutes={ignoreSupersededFormValue}
-          onShowTimer={ignoreSupersededFormValue}
-          onHideModal={handleHideModal}
-        />
-      </Modal>
+    <div className={APP_CLASSES}>
       <Header />
-      <main className="wrapper">
-        <Board />
+      <main className={MAIN_CLASSES}>
+        <Board
+          onAddSession={handleAddSession}
+          onEditSession={handleEditSession}
+          onEditCentreNumber={handleOpenBoardSettings}
+        />
       </main>
-      <Footer click={handleShowModal} examName="" />
+      <Footer />
+      {sessionDialogTarget !== null && (
+        <SessionDialog target={sessionDialogTarget} onClose={handleCloseSessionDialog} />
+      )}
+      {boardSettingsOpen && <BoardSettingsDialog onClose={handleCloseBoardSettings} />}
     </div>
   );
 }

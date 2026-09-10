@@ -22,7 +22,12 @@ export const exams = [
     shortName: "Starters",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "PRE-A1-01", name: "Reading & Writing", minutes: 20, qualifier: "exact" },
+      {
+        id: "PRE-A1-01",
+        name: "Reading & Writing",
+        minutes: 20,
+        qualifier: "exact",
+      },
       { id: "PRE-A1-02", name: "Listening", minutes: 20, qualifier: "approx" },
     ],
   },
@@ -31,7 +36,12 @@ export const exams = [
     shortName: "Movers",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "A1-01", name: "Reading & Writing", minutes: 30, qualifier: "exact" },
+      {
+        id: "A1-01",
+        name: "Reading & Writing",
+        minutes: 30,
+        qualifier: "exact",
+      },
       { id: "A1-02", name: "Listening", minutes: 28, qualifier: "approx" },
     ],
   },
@@ -40,7 +50,12 @@ export const exams = [
     shortName: "Flyers",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "A2-01", name: "Reading & Writing", minutes: 40, qualifier: "exact" },
+      {
+        id: "A2-01",
+        name: "Reading & Writing",
+        minutes: 40,
+        qualifier: "exact",
+      },
       { id: "A2-02", name: "Listening", minutes: 28, qualifier: "approx" },
     ],
   },
@@ -49,7 +64,12 @@ export const exams = [
     shortName: "KET",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "Key-01", name: "Reading & Writing", minutes: 60, qualifier: "exact" },
+      {
+        id: "Key-01",
+        name: "Reading & Writing",
+        minutes: 60,
+        qualifier: "exact",
+      },
       { id: "Key-02", name: "Listening", minutes: 30, qualifier: "approx" },
     ],
   },
@@ -58,7 +78,12 @@ export const exams = [
     shortName: "KET fS",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "KeyfS-01", name: "Reading & Writing", minutes: 60, qualifier: "exact" },
+      {
+        id: "KeyfS-01",
+        name: "Reading & Writing",
+        minutes: 60,
+        qualifier: "exact",
+      },
       { id: "KeyfS-02", name: "Listening", minutes: 30, qualifier: "approx" },
     ],
   },
@@ -87,7 +112,12 @@ export const exams = [
     shortName: "FCE",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "B2-01", name: "Reading & Use of English", minutes: 75, qualifier: "exact" },
+      {
+        id: "B2-01",
+        name: "Reading & Use of English",
+        minutes: 75,
+        qualifier: "exact",
+      },
       { id: "B2-02", name: "Writing", minutes: 80, qualifier: "exact" },
       { id: "B2-03", name: "Listening", minutes: 40, qualifier: "approx" },
     ],
@@ -97,7 +127,12 @@ export const exams = [
     shortName: "FCE fS",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "B2fS-01", name: "Reading & Use of English", minutes: 75, qualifier: "exact" },
+      {
+        id: "B2fS-01",
+        name: "Reading & Use of English",
+        minutes: 75,
+        qualifier: "exact",
+      },
       { id: "B2fS-02", name: "Writing", minutes: 80, qualifier: "exact" },
       { id: "B2fS-03", name: "Listening", minutes: 40, qualifier: "approx" },
     ],
@@ -107,7 +142,12 @@ export const exams = [
     shortName: "CAE",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "C1-01", name: "Reading & Use of English", minutes: 90, qualifier: "exact" },
+      {
+        id: "C1-01",
+        name: "Reading & Use of English",
+        minutes: 90,
+        qualifier: "exact",
+      },
       { id: "C1-02", name: "Writing", minutes: 90, qualifier: "exact" },
       { id: "C1-03", name: "Listening", minutes: 40, qualifier: "approx" },
     ],
@@ -117,7 +157,12 @@ export const exams = [
     shortName: "CPE",
     modes: ["paper", "digital"],
     examParts: [
-      { id: "C2-01", name: "Reading & Use of English", minutes: 90, qualifier: "exact" },
+      {
+        id: "C2-01",
+        name: "Reading & Use of English",
+        minutes: 90,
+        qualifier: "exact",
+      },
       { id: "C2-02", name: "Writing", minutes: 90, qualifier: "exact" },
       { id: "C2-03", name: "Listening", minutes: 40, qualifier: "approx" },
     ],
