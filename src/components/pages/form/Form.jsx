@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getExamParts, examOptions, examPartOptions } from "./Helpers";
+import { formatAllowedTime } from "../../../lib/format";
 
 const Form = (props) => {
   const [selectedExam, setSelectedExam] = useState();
@@ -45,7 +46,12 @@ const Form = (props) => {
     event.preventDefault();
     props.onExamName(selectedExam);
     props.onExamPart(selectedExamPart);
-    props.onExamTime(selectedExamPartDetails.time);
+    props.onExamTime(
+      formatAllowedTime(
+        selectedExamPartDetails.minutes,
+        selectedExamPartDetails.qualifier,
+      ),
+    );
     props.onExamTimeInMinutes(selectedExamPartDetails.minutes);
     props.onShowTimer(showTimer);
     props.onHideModal();
