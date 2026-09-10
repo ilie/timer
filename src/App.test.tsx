@@ -77,6 +77,10 @@ const cancel = async (user: UserEvent) => {
   await user.click(screen.getByRole("button", { name: "Cancel" }));
 };
 
+const closeWithCross = async (user: UserEvent) => {
+  await user.click(screen.getByRole("button", { name: "Close" }));
+};
+
 const examNames = () => getSnapshot().sessions.map((session) => session.examName);
 
 beforeEach(() => {
@@ -209,6 +213,44 @@ test("adds nothing when the add dialog is cancelled", async () => {
 
   expect(getSnapshot().sessions).toHaveLength(0);
   expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+});
+
+test("discards a new session when the dialog is closed with its cross", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await openAddDialog(user);
+  await chooseExam(user, "B2 First");
+  await choosePart(user, "Writing");
+  await chooseMode(user, "Paper");
+  await closeWithCross(user);
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(getSnapshot().sessions).toHaveLength(0);
+});
+
+test("discards an edit when the dialog is closed with its cross", async () => {
+  const user = userEvent.setup();
+  seedOneSession();
+  render(<App />);
+
+  await openTabDialog(user, "B2 First");
+  await choosePart(user, "Writing");
+  await closeWithCross(user);
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(getSnapshot().sessions).toHaveLength(1);
+  expect(getSnapshot().sessions[0]?.partIndex).toBe(0);
+});
+
+test("keeps the cross out of the dialog's initial focus", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await openAddDialog(user);
+
+  expect(screen.getByLabelText("Exam")).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Close" })).not.toHaveFocus();
 });
 
 test("leaves every configured session in place when the dialog is cancelled", async () => {

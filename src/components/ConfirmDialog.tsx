@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { TriangleAlert } from "lucide-react";
 import { ModalDialog } from "./ModalDialog";
 
 type ConfirmDialogProps = {
@@ -30,6 +31,7 @@ export function ConfirmDialog({
   return (
     <ModalDialog
       title={title}
+      titleIcon={TriangleAlert}
       submitLabel={confirmLabel}
       destructive
       onSubmit={handleConfirm}

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
-import { CircleAlert, FileText, Monitor } from "lucide-react";
+import { CalendarPlus, CircleAlert, FileText, GraduationCap, ListChecks, Monitor, Pencil, Timer } from "lucide-react";
 import {
   DIALOG_CONTROL_CLASSES,
   DIALOG_CONTROL_INVALID_CLASSES,
@@ -10,6 +10,7 @@ import {
   DIALOG_FIELD_HEADER_CLASSES,
   DIALOG_HINT_CLASSES,
   DIALOG_LABEL_CLASSES,
+  DIALOG_LABEL_ICON_CLASSES,
   DIALOG_REQUIRED_MARK_CLASSES,
   ModalDialog,
 } from "./ModalDialog";
@@ -74,7 +75,7 @@ const MODE_OPTION_WAITING_CLASSES =
 
 const RADIO_CLASSES = "h-5 w-5 accent-vlec-blue-900";
 
-const MODE_ICON_CLASSES = "h-5 w-5 shrink-0";
+const MODE_ICON_CLASSES = "h-[1em] w-[1em] shrink-0";
 
 const examByName = (examName: string): Exam | undefined =>
   exams.find((candidate) => candidate.examName === examName);
@@ -220,6 +221,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
   return (
     <ModalDialog
       title={target.kind === "add" ? "Add a session" : "Configure this session"}
+      titleIcon={target.kind === "add" ? CalendarPlus : Pencil}
       submitLabel="Save"
       onSubmit={handleSubmit}
       onClose={onClose}
@@ -227,6 +229,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
       <div className={DIALOG_FIELD_CLASSES}>
         <div className={DIALOG_FIELD_HEADER_CLASSES}>
           <label className={DIALOG_LABEL_CLASSES} htmlFor={examId}>
+            <GraduationCap className={DIALOG_LABEL_ICON_CLASSES} aria-hidden="true" />
             Exam
           </label>
           <span className={DIALOG_REQUIRED_MARK_CLASSES} aria-hidden="true">
@@ -263,6 +266,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
       <div className={DIALOG_FIELD_CLASSES}>
         <div className={DIALOG_FIELD_HEADER_CLASSES}>
           <label className={DIALOG_LABEL_CLASSES} htmlFor={partId}>
+            <ListChecks className={DIALOG_LABEL_ICON_CLASSES} aria-hidden="true" />
             Component
           </label>
           <span className={DIALOG_REQUIRED_MARK_CLASSES} aria-hidden="true">
@@ -347,6 +351,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
 
       <div className={DIALOG_FIELD_CLASSES}>
         <label className={DIALOG_LABEL_CLASSES} htmlFor={extraMinutesId}>
+          <Timer className={DIALOG_LABEL_ICON_CLASSES} aria-hidden="true" />
           Extra time (whole minutes)
         </label>
         <input

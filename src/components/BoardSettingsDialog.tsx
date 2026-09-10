@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
-import { CircleAlert } from "lucide-react";
+import { Building2, CircleAlert, Hash } from "lucide-react";
 import {
   DIALOG_CONTROL_CLASSES,
   DIALOG_CONTROL_INVALID_CLASSES,
@@ -9,6 +9,7 @@ import {
   DIALOG_FIELD_CLASSES,
   DIALOG_HINT_CLASSES,
   DIALOG_LABEL_CLASSES,
+  DIALOG_LABEL_ICON_CLASSES,
   ModalDialog,
 } from "./ModalDialog";
 import { getSnapshot, setCentreNumber } from "../store/boardStore";
@@ -52,12 +53,14 @@ export function BoardSettingsDialog({ onClose }: BoardSettingsDialogProps): Reac
   return (
     <ModalDialog
       title="Board settings"
+      titleIcon={Building2}
       submitLabel="Save"
       onSubmit={handleSubmit}
       onClose={onClose}
     >
       <div className={DIALOG_FIELD_CLASSES}>
         <label className={DIALOG_LABEL_CLASSES} htmlFor={centreNumberId}>
+          <Hash className={DIALOG_LABEL_ICON_CLASSES} aria-hidden="true" />
           Centre number
         </label>
         <input
