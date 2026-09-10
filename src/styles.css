@@ -102,15 +102,11 @@
 
   &::before {
     left: calc(-1 * var(--tab-flare));
-    mask-image: radial-gradient(
-      circle var(--tab-flare) at 100% 0,
-      transparent 0 100%,
-      black 100%
-    );
+    mask-image: radial-gradient(circle var(--tab-flare) at 0 0, transparent 0 99.5%, black 100%);
   }
 
   &::after {
     right: calc(-1 * var(--tab-flare));
-    mask-image: radial-gradient(circle var(--tab-flare) at 0 0, transparent 0 100%, black 100%);
+    mask-image: radial-gradient(circle var(--tab-flare) at 100% 0, transparent 0 99.5%, black 100%);
   }
 }

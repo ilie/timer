@@ -53,10 +53,10 @@ type BoardRow = {
 
 const LABEL_LANE_FRACTION = 0.3;
 
-const BOARD_CLASSES = "group/board @container/board flex h-full min-h-0 w-full flex-col";
+const BOARD_CLASSES = "flex h-full min-h-0 w-full flex-col";
 
 const CENTRE_NUMBER_CLASSES =
-  "mb-2 mr-auto inline-flex shrink-0 cursor-pointer items-baseline gap-2 rounded-md px-2 py-1 text-left uppercase tracking-[0.16em] text-linguaskill-slate-500 transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-centre-number";
+  "mb-2 ml-6 mr-auto inline-flex shrink-0 cursor-pointer items-baseline gap-2 rounded-md px-2 py-1 text-left uppercase tracking-[0.16em] text-linguaskill-slate-500 transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-centre-number";
 
 const CENTRE_NUMBER_VALUE_CLASSES = "font-semibold text-vlec-blue-900";
 
@@ -70,7 +70,7 @@ const LABEL_COLUMN_CLASSES = "w-[30%]";
 
 const COLLAPSED_LABEL_COLUMN_CLASSES = "w-0";
 
-const TAB_STRIP_CLASSES = "bg-linguaskill-slate-50";
+const TAB_STRIP_CLASSES = "bg-vlec-blue-50";
 
 const TAB_STRIP_CELL_CLASSES = "pl-[var(--tab-flare)] pr-0 pt-2 align-bottom";
 
@@ -90,13 +90,13 @@ const TAB_CLOSE_CLASSES =
 const ADD_BUTTON_CLASSES =
   "mb-1 ml-auto mr-2 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-tab text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-linguaskill-slate-300";
 
-const ROW_LABEL_CLASSES = "overflow-hidden text-right align-middle";
+const ROW_LABEL_CLASSES = "overflow-hidden pl-6 text-right align-middle";
 
 const ROW_LABEL_TEXT_CLASSES = `${FIT_CLASSES} pr-[0.35em] font-semibold text-linguaskill-slate-500 after:content-[':']`;
 
 const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
 
-const VALUE_CELL_CLASSES = "overflow-hidden align-middle";
+const VALUE_CELL_CLASSES = "overflow-hidden px-2 align-middle";
 
 const CENTRED_VALUE_CLASSES = "text-center";
 
@@ -104,7 +104,7 @@ const ALIGNED_VALUE_CLASSES = "text-left";
 
 const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-300";
 
-const CONTROLS_CELL_CLASSES = "px-3 align-middle";
+const CONTROLS_CELL_CLASSES = "px-2 align-middle";
 
 const EXTRA_TIME_CLASSES =
   "ml-[0.35em] align-middle text-[0.5em] font-medium tracking-wide text-linguaskill-slate-500";
