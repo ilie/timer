@@ -5,13 +5,11 @@ import CAMBRIDGE23 from "../../Assets/img/Cambridge_Platinum_Centre_2023.svg";
 const Header = () => {
   return (
     <header className="app-header">
-      <img src={VLEC} alt="Virginia Lyons Exam Centre" />
+      <img className="h-[125px] w-auto" src={VLEC} alt="Virginia Lyons Exam Centre" />
       <img
-        className="cambridge-logo"
+        className="cambridge-logo h-[125px] w-auto"
         src={CAMBRIDGE23}
         alt="Authorized Platinum Exam Centre"
-        height="125px"
-        // width="344px"
       />
     </header>
   );
