@@ -1,16 +1,19 @@
 import { DEFAULT_CENTRE_NUMBER, MAX_SESSIONS } from "../config/board";
 import { exams } from "../config/exams";
-import type { Mode } from "../config/exams";
+import type { Exam, Mode } from "../config/exams";
 import { STORAGE_KEY } from "../config/storage";
 import { pause, reset, restore, resume, start } from "../lib/timer";
 import type { TimerState } from "../lib/timer";
 
-export type Session = {
-  id: string;
+export type SessionConfig = {
   examName: string;
   partIndex: number;
   mode: Mode;
   extraMinutes: number;
+};
+
+export type Session = SessionConfig & {
+  id: string;
   timer: TimerState;
 };
 
@@ -55,9 +58,11 @@ const listeners = new Set<() => void>();
 
 let expiryTimeout: ReturnType<typeof setTimeout> | null = null;
 
+const findExam = (examName: string): Exam | undefined =>
+  exams.find((candidate) => candidate.examName === examName);
+
 export const sessionDurationMs = (session: Session): number => {
-  const exam = exams.find((candidate) => candidate.examName === session.examName);
-  const part = exam?.examParts[session.partIndex];
+  const part = findExam(session.examName)?.examParts[session.partIndex];
   if (part === undefined) {
     return 0;
   }
@@ -112,7 +117,7 @@ const parseSession = (value: unknown): Session | null => {
   ) {
     return null;
   }
-  const exam = exams.find((candidate) => candidate.examName === examName);
+  const exam = findExam(examName);
   if (exam === undefined || exam.examParts[partIndex] === undefined) {
     return null;
   }
@@ -287,27 +292,34 @@ export const subscribe = (listener: () => void): (() => void) => {
 
 export const getSnapshot = (): BoardState => snapshot;
 
-const updateSessionTimer = (
-  id: string,
-  nextTimer: (session: Session, now: number) => TimerState,
-): void => {
-  const now = Date.now();
+const replaceSession = (id: string, replacement: (session: Session) => Session): void => {
   let changed = false;
   const sessions = snapshot.sessions.map((session) => {
     if (session.id !== id) {
       return session;
     }
-    const timer = nextTimer(session, now);
-    if (timer === session.timer) {
+    const next = replacement(session);
+    if (next === session) {
       return session;
     }
     changed = true;
-    return { ...session, timer };
+    return next;
   });
   if (!changed) {
     return;
   }
   commit({ ...snapshot, sessions });
+};
+
+const updateSessionTimer = (
+  id: string,
+  nextTimer: (session: Session, now: number) => TimerState,
+): void => {
+  const now = Date.now();
+  replaceSession(id, (session) => {
+    const timer = nextTimer(session, now);
+    return timer === session.timer ? session : { ...session, timer };
+  });
 };
 
 export const startSession = (id: string): void => {
@@ -324,6 +336,54 @@ export const resumeSession = (id: string): void => {
 
 export const resetSession = (id: string): void => {
   updateSessionTimer(id, (session) => (session.timer.status === "idle" ? session.timer : reset()));
+};
+
+const unusedSessionId = (sessions: readonly Session[]): string => {
+  const takenIds = new Set(sessions.map((session) => session.id));
+  let index = 1;
+  while (takenIds.has(`session-${index}`)) {
+    index += 1;
+  }
+  return `session-${index}`;
+};
+
+const DEFAULT_EXAM = exams[0];
+
+export const addSession = (): void => {
+  if (snapshot.sessions.length >= MAX_SESSIONS) {
+    return;
+  }
+  const session: Session = {
+    id: unusedSessionId(snapshot.sessions),
+    examName: DEFAULT_EXAM.examName,
+    partIndex: 0,
+    mode: DEFAULT_EXAM.modes[0],
+    extraMinutes: 0,
+    timer: reset(),
+  };
+  commit({ ...snapshot, sessions: [...snapshot.sessions, session] });
+};
+
+export const removeSession = (id: string): void => {
+  const sessions = snapshot.sessions.filter((session) => session.id !== id);
+  if (sessions.length === snapshot.sessions.length) {
+    return;
+  }
+  commit({ ...snapshot, sessions });
+};
+
+export const setSessionConfig = (id: string, config: SessionConfig): void => {
+  replaceSession(id, (session) => ({ ...session, ...config, timer: reset() }));
+};
+
+export const advanceComponent = (id: string): void => {
+  replaceSession(id, (session) => {
+    const nextPartIndex = session.partIndex + 1;
+    if (findExam(session.examName)?.examParts[nextPartIndex] === undefined) {
+      return session;
+    }
+    return { ...session, partIndex: nextPartIndex, timer: reset() };
+  });
 };
 
 export const setOnlySession = (session: Session): void => {

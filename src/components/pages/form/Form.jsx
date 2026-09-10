@@ -42,8 +42,8 @@ const Form = (props) => {
       showTimer = true;
       console.log("is true");
     }
-    sessionStorage.setItem("examType", examTypeRef.current.value);
     event.preventDefault();
+    props.onExamType(examTypeRef.current.value);
     props.onExamName(selectedExam);
     props.onExamPart(selectedExamPart);
     props.onExamTime(

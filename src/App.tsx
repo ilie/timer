@@ -13,14 +13,11 @@ import { getSnapshot, setOnlySession, subscribe } from "./store/boardStore";
 
 const BRIDGED_SESSION_ID = "bridged-session";
 
-function selectedMode(): Mode {
-  return sessionStorage.getItem("examType") === "CB" ? "digital" : "paper";
-}
-
 function App() {
   const board = useSyncExternalStore(subscribe, getSnapshot);
   const [showModal, setShowModal] = useState(false);
   const chosenExamName = useRef("");
+  const chosenMode = useRef<Mode>("paper");
 
   useClockJump();
 
@@ -33,6 +30,10 @@ function App() {
 
   function handleShowModal() {
     setShowModal(true);
+  }
+
+  function handleExamType(value: string) {
+    chosenMode.current = value === "CB" ? "digital" : "paper";
   }
 
   function handleExamName(value: string) {
@@ -53,7 +54,7 @@ function App() {
       id: BRIDGED_SESSION_ID,
       examName,
       partIndex,
-      mode: selectedMode(),
+      mode: chosenMode.current,
       extraMinutes: 0,
       timer: reset(),
     });
@@ -67,6 +68,7 @@ function App() {
     <div className="App">
       <Modal showModal={showModal} click={handleHideModal}>
         <Settings
+          onExamType={handleExamType}
           onExamName={handleExamName}
           onExamPart={handleExamPart}
           onExamTime={ignoreSupersededFormValue}

@@ -2,13 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STORAGE_KEY } from "../config/storage";
 import { statusOf } from "../lib/timer";
 import {
+  addSession,
+  advanceComponent,
   getSnapshot,
   hydrateFromStorage,
   pauseSession,
+  removeSession,
+  sessionDurationMs,
   setClockJumpDetected,
+  setSessionConfig,
   startSession,
   subscribe,
 } from "./boardStore";
+import type { Session } from "./boardStore";
 
 const EXAM_START = new Date("2026-06-11T09:00:00.000Z");
 const READING_MS = 75 * 60_000;
@@ -35,6 +41,13 @@ const seed = (sessions: readonly unknown[]): void => {
 };
 
 const timerOf = (id: string) => getSnapshot().sessions.find((session) => session.id === id)?.timer;
+
+const sessionOf = (id: string) => getSnapshot().sessions.find((session) => session.id === id);
+
+const endsAtOf = (id: string): number | undefined => {
+  const timer = timerOf(id);
+  return timer?.status === "running" ? timer.endsAt : undefined;
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -269,5 +282,109 @@ describe("clock jump flag", () => {
     expect(getSnapshot().clockJumpDetected).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
+  });
+});
+
+describe("session lifecycle", () => {
+  it("refuses a fifth session and leaves the four already on the board", () => {
+    seed([
+      { ...idleSession, id: "one" },
+      { ...idleSession, id: "two" },
+      { ...idleSession, id: "three" },
+      { ...idleSession, id: "four" },
+    ]);
+    const before = getSnapshot();
+
+    addSession();
+
+    expect(getSnapshot().sessions).toHaveLength(4);
+    expect(Object.is(before, getSnapshot())).toBe(true);
+  });
+
+  it("adds sessions up to the cap with distinct ids", () => {
+    addSession();
+    addSession();
+
+    const ids = getSnapshot().sessions.map((session) => session.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it("leaves the other sessions' end times untouched when one is removed", () => {
+    seed([idleSession, { ...idleSession, id: "writing", partIndex: 1 }]);
+    startSession("reading");
+    startSession("writing");
+    const readingEndsAt = endsAtOf("reading");
+
+    removeSession("writing");
+
+    expect(getSnapshot().sessions.map((session) => session.id)).toEqual(["reading"]);
+    expect(endsAtOf("reading")).toBe(readingEndsAt);
+  });
+
+  it("re-seeds a session from its new configuration", () => {
+    seed([idleSession]);
+
+    setSessionConfig("reading", {
+      examName: "C1 Advanced",
+      partIndex: 1,
+      mode: "digital",
+      extraMinutes: 10,
+    });
+
+    expect(sessionOf("reading")).toEqual({
+      id: "reading",
+      examName: "C1 Advanced",
+      partIndex: 1,
+      mode: "digital",
+      extraMinutes: 10,
+      timer: { status: "idle" },
+    });
+  });
+});
+
+describe("advancing to the next component", () => {
+  it("returns the session to idle with the next component's duration", () => {
+    seed([idleSession]);
+    startSession("reading");
+
+    advanceComponent("reading");
+
+    expect(sessionOf("reading")?.partIndex).toBe(1);
+    expect(timerOf("reading")).toEqual({ status: "idle" });
+
+    startSession("reading");
+    expect(timerOf("reading")).toEqual({ status: "running", endsAt: Date.now() + 80 * 60_000 });
+  });
+
+  it("does nothing on the last component of an exam", () => {
+    seed([{ ...idleSession, partIndex: 2 }]);
+    startSession("reading");
+    const before = getSnapshot();
+
+    advanceComponent("reading");
+
+    expect(sessionOf("reading")?.partIndex).toBe(2);
+    expect(Object.is(before, getSnapshot())).toBe(true);
+  });
+});
+
+describe("session duration", () => {
+  const readingSession = (overrides: Partial<Session>): Session => ({
+    id: "reading",
+    examName: "B2 First",
+    partIndex: 0,
+    mode: "paper",
+    extraMinutes: 0,
+    timer: { status: "idle" },
+    ...overrides,
+  });
+
+  it("adds the extra minutes to the component's own minutes", () => {
+    expect(sessionDurationMs(readingSession({ extraMinutes: 19 }))).toBe((75 + 19) * 60_000);
+  });
+
+  it("is zero for a session whose component no longer exists", () => {
+    expect(sessionDurationMs(readingSession({ partIndex: 9 }))).toBe(0);
   });
 });
