@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "./App.css";
 import Header from "./components/UI/Header";
 import Main from "./components/pages/Main";
 import Settings from "./components/pages/Settings";
@@ -21,27 +20,24 @@ function App() {
     setShowModal(true);
   };
 
-  const examNameHandler = (value) => {
-    setExamName(
-      !!sessionStorage.getItem("examType")
-        ? sessionStorage.getItem("examType") + " " + value
-        : value
-    );
+  const examNameHandler = (value: string) => {
+    const examType = sessionStorage.getItem("examType");
+    setExamName(examType ? examType + " " + value : value);
   };
-  const examPartHandler = (value) => {
+  const examPartHandler = (value: string) => {
     setExamPart(value);
   };
-  const examTimeHandler = (value) => {
+  const examTimeHandler = (value: string) => {
     setExamTime(value);
   };
-  const examTimeInMinutesHandler = (value) => {
+  const examTimeInMinutesHandler = (value: number) => {
     setExamTimeInMinutes(value);
   };
-  const showTimerHandler = (value) => {
+  const showTimerHandler = (value: boolean) => {
     setShowTimer(value);
   };
   const toggleTimerHandler = () => {
-    setShowTimer((showTimer) => !showTimer);
+    setShowTimer((current) => !current);
   };
 
   return (
