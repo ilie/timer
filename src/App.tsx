@@ -1,28 +1,25 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import Header from "./components/UI/Header";
 import Settings from "./components/pages/Settings";
 import Modal from "./components/UI/Modal";
 import Footer from "./components/UI/Footer";
-import { SessionColumn } from "./components/SessionColumn";
+import { Board } from "./components/Board";
 import { useClockJump } from "./hooks/useClockJump";
 import { exams } from "./config/exams";
 import type { Mode } from "./config/exams";
-import { densityFor } from "./lib/format";
 import { reset } from "./lib/timer";
-import { getSnapshot, setOnlySession, subscribe } from "./store/boardStore";
+import { getSnapshot, setOnlySession } from "./store/boardStore";
 
 const BRIDGED_SESSION_ID = "bridged-session";
 
+const EXTRA_MINUTES = 0;
+
 function App() {
-  const board = useSyncExternalStore(subscribe, getSnapshot);
   const [showModal, setShowModal] = useState(false);
   const chosenExamName = useRef("");
   const chosenMode = useRef<Mode>("paper");
 
   useClockJump();
-
-  const session = board.sessions[0];
-  const density = densityFor(board.sessions.length);
 
   function handleHideModal() {
     setShowModal(false);
@@ -50,19 +47,25 @@ function App() {
     if (partIndex < 0) {
       return;
     }
+    const mode = chosenMode.current;
+    const current = getSnapshot().sessions.find((session) => session.id === BRIDGED_SESSION_ID);
+    const sameConfiguration =
+      current !== undefined &&
+      current.examName === examName &&
+      current.partIndex === partIndex &&
+      current.mode === mode &&
+      current.extraMinutes === EXTRA_MINUTES;
     setOnlySession({
       id: BRIDGED_SESSION_ID,
       examName,
       partIndex,
-      mode: chosenMode.current,
-      extraMinutes: 0,
-      timer: reset(),
+      mode,
+      extraMinutes: EXTRA_MINUTES,
+      timer: sameConfiguration ? current.timer : reset(),
     });
   }
 
   function ignoreSupersededFormValue() {}
-
-  function handleThresholdCross() {}
 
   return (
     <div className="App">
@@ -79,16 +82,7 @@ function App() {
       </Modal>
       <Header />
       <main className="wrapper">
-        <p className="centre-number">Centre no: {board.centreNumber}</p>
-        {session === undefined ? (
-          <p className="session-column">No exam selected yet.</p>
-        ) : (
-          <SessionColumn
-            session={session}
-            density={density}
-            onThresholdCross={handleThresholdCross}
-          />
-        )}
+        <Board />
       </main>
       <Footer click={handleShowModal} examName="" />
     </div>
