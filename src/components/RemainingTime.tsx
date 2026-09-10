@@ -21,7 +21,7 @@ type SegmentRunProps = {
 };
 
 export const FIT_CLASSES =
-  "inline-block whitespace-nowrap px-[0.18em] align-middle leading-none text-[length:var(--board-value-size,1.75rem)]";
+  "inline-block whitespace-nowrap px-[0.1em] align-middle leading-none text-[length:var(--board-value-size,1.75rem)]";
 
 export const COLUMN_LABEL_CLASSES =
   "mb-[0.35em] block text-[0.28em] font-semibold uppercase leading-tight tracking-[0.2em] text-linguaskill-slate-400";

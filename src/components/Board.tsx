@@ -51,8 +51,6 @@ type BoardRow = {
   render: (column: SessionView) => ReactNode;
 };
 
-const LABEL_LANE_FRACTION = 0.3;
-
 const BOARD_CLASSES = "flex h-full min-h-0 w-full flex-col";
 
 const CENTRE_NUMBER_CLASSES =
@@ -66,7 +64,7 @@ const REGION_CLASSES = "min-h-0 flex-1 overflow-hidden";
 
 const GRID_CLASSES = "h-full w-full table-fixed border-collapse";
 
-const LABEL_COLUMN_CLASSES = "w-[30%]";
+const LABEL_COLUMN_CLASSES = "w-[var(--board-label-lane,30%)]";
 
 const COLLAPSED_LABEL_COLUMN_CLASSES = "w-0";
 
@@ -96,13 +94,13 @@ const ROW_LABEL_TEXT_CLASSES = `${FIT_CLASSES} pr-[0.35em] font-semibold text-li
 
 const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
 
-const VALUE_CELL_CLASSES = "overflow-hidden px-2 align-middle";
+const VALUE_CELL_CLASSES = "overflow-hidden px-1 align-middle";
 
 const CENTRED_VALUE_CLASSES = "text-center";
 
 const ALIGNED_VALUE_CLASSES = "text-left";
 
-const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-300";
+const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-200";
 
 const CONTROLS_CELL_CLASSES = "px-2 align-middle";
 
@@ -225,7 +223,7 @@ export function Board({
     columns: Math.max(1, columns.length),
     valueRows: anyColumnCountsDown ? 4 : 3,
     hasControlsRow: anyColumnCountsDown,
-    labelLaneFraction: labelLaneVisible ? LABEL_LANE_FRACTION : 0,
+    labelLane: labelLaneVisible,
   };
   const heights = rowHeights(layout);
 
