@@ -1,4 +1,5 @@
 @import "tailwindcss" source("./");
+@source "../index.html";
 
 @theme {
   --color-vlec-blue-50: oklch(0.97 0.05 285.62);

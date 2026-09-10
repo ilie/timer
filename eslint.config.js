@@ -6,7 +6,7 @@ export default tseslint.config(
     ignores: ["dist", "build", "**/*.jsx", "**/*.js"],
   },
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}", "vite.config.ts"],
     extends: [...tseslint.configs.recommended, reactHooks.configs.flat.recommended],
   },
 );
