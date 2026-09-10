@@ -1,6 +1,7 @@
 {
-  "short_name": "Timer",
-  "name": "Countdown Timer",
+  "short_name": "VLEC Timer",
+  "name": "Exam countdown board — Virginia Lyons Exam Centre",
+  "description": "On-screen countdown board for Cambridge English exam sessions.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +21,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "orientation": "landscape",
+  "theme_color": "#23125A",
   "background_color": "#ffffff"
 }
