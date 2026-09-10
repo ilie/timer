@@ -22,13 +22,17 @@ export function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps): ReactElement {
+  function handleConfirm(): boolean {
+    onConfirm();
+    return true;
+  }
+
   return (
     <ModalDialog
       title={title}
       submitLabel={confirmLabel}
       destructive
-      canSubmit
-      onSubmit={onConfirm}
+      onSubmit={handleConfirm}
       onClose={onClose}
     >
       <p className={MESSAGE_CLASSES}>{message}</p>

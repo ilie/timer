@@ -108,22 +108,71 @@ test("opens once under the double effects of strict mode", async () => {
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
 });
 
-test("keeps Save disabled until the exam, the component and the format are all chosen", async () => {
+test("opens calm, with nothing marked as an error", async () => {
   const user = userEvent.setup();
   render(<App />);
 
   await openAddDialog(user);
 
-  expect(saveButton()).toBeDisabled();
+  expect(saveButton()).toBeEnabled();
+  expect(screen.queryByText(/Choose which exam/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Choose the component/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/paper or on screen/)).not.toBeInTheDocument();
+  expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
+  expect(screen.getByLabelText("Exam")).toHaveAttribute("aria-invalid", "false");
+});
+
+test("reports a required field only once it has been left empty", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await openAddDialog(user);
+
+  expect(screen.queryByText(/Choose which exam/)).not.toBeInTheDocument();
+
+  await user.tab();
+
+  const examSelect = screen.getByLabelText("Exam");
+  expect(screen.getByText(/Choose which exam/)).toBeInTheDocument();
+  expect(examSelect).toHaveAttribute("aria-invalid", "true");
 
   await chooseExam(user, "B2 First");
-  expect(saveButton()).toBeDisabled();
 
-  await choosePart(user, "Reading & Use of English");
-  expect(saveButton()).toBeDisabled();
+  expect(screen.queryByText(/Choose which exam/)).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Exam")).toHaveAttribute("aria-invalid", "false");
+});
+
+test("reveals the gaps and focuses the first one when Save is pressed", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await openAddDialog(user);
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(0);
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.getByText(/Choose which exam/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Exam")).toHaveFocus();
+
+  await chooseExam(user, "B2 First");
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(0);
+  expect(screen.getByText(/Choose the component/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Component")).toHaveFocus();
+
+  await choosePart(user, "Writing");
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(0);
+  expect(screen.getByText(/paper or on screen/)).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "Paper" })).toHaveFocus();
 
   await chooseMode(user, "Paper");
-  expect(saveButton()).toBeEnabled();
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(1);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
 test("adds nothing while the dialog is open and adds the chosen configuration on save", async () => {
@@ -289,29 +338,22 @@ test("stays open when a press inside the dialog is released over the backdrop", 
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
 
-test("names the fields still missing while Save is disabled", async () => {
+test("associates each revealed message with the field it belongs to", async () => {
   const user = userEvent.setup();
   render(<App />);
 
   await openAddDialog(user);
+  await save(user);
 
-  const outstanding = screen.getByRole("status");
-  expect(outstanding).toHaveTextContent("Still to choose: an exam, a component, a format.");
-  expect(screen.getByLabelText("Exam")).toHaveAttribute("aria-describedby", outstanding.id);
-  expect(screen.getAllByText("Required")).toHaveLength(3);
+  const examSelect = screen.getByLabelText("Exam");
+  const described = examSelect.getAttribute("aria-describedby");
+  expect(described).not.toBeNull();
+  expect(document.getElementById(described ?? "")).toHaveTextContent(/Choose which exam/);
   expect(screen.getByRole("radio", { name: "Paper" })).toBeDisabled();
 
   await chooseExam(user, "B2 First");
 
-  expect(screen.getByText("Still to choose: a component, a format.")).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: "Paper" })).toBeEnabled();
-
-  await choosePart(user, "Writing");
-  await chooseMode(user, "Paper");
-
-  expect(screen.queryByText(/Still to choose/)).not.toBeInTheDocument();
-  expect(screen.queryByText("Required")).not.toBeInTheDocument();
-  expect(saveButton()).toBeEnabled();
 });
 
 test("offers a digital-only exam no paper format", async () => {
@@ -335,7 +377,12 @@ test("clears a component chosen for the previous exam", async () => {
   await chooseExam(user, "A2 Key");
 
   expect(screen.getByLabelText("Component")).toHaveValue("");
-  expect(saveButton()).toBeDisabled();
+  expect(screen.queryByText(/Choose the component/)).not.toBeInTheDocument();
+
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(0);
+  expect(screen.getByText(/Choose the component/)).toBeInTheDocument();
 });
 
 test("refuses a fractional number of extra minutes", async () => {
@@ -351,13 +398,21 @@ test("refuses a fractional number of extra minutes", async () => {
   await user.clear(extraMinutes);
   await user.type(extraMinutes, "12.5");
 
-  expect(saveButton()).toBeDisabled();
-  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(screen.queryByText(/whole minutes between/)).not.toBeInTheDocument();
+
+  await user.tab();
+
+  expect(screen.getByText(/whole minutes between/)).toBeInTheDocument();
+
+  await save(user);
+
+  expect(getSnapshot().sessions).toHaveLength(0);
+  expect(extraMinutes).toHaveFocus();
 
   await user.clear(extraMinutes);
   await user.type(extraMinutes, "15");
 
-  expect(saveButton()).toBeEnabled();
+  expect(screen.queryByText(/whole minutes between/)).not.toBeInTheDocument();
 
   await save(user);
 

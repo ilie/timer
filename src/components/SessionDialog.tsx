@@ -1,13 +1,16 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
+import { CircleAlert, FileText, Monitor } from "lucide-react";
 import {
   DIALOG_CONTROL_CLASSES,
-  DIALOG_CONTROL_OUTSTANDING_CLASSES,
+  DIALOG_CONTROL_INVALID_CLASSES,
   DIALOG_ERROR_CLASSES,
+  DIALOG_ERROR_ICON_CLASSES,
   DIALOG_FIELD_CLASSES,
+  DIALOG_FIELD_HEADER_CLASSES,
   DIALOG_HINT_CLASSES,
   DIALOG_LABEL_CLASSES,
-  DIALOG_REQUIRED_CHIP_CLASSES,
+  DIALOG_REQUIRED_MARK_CLASSES,
   ModalDialog,
 } from "./ModalDialog";
 import { MAX_EXTRA_MINUTES } from "../config/board";
@@ -29,10 +32,14 @@ type DraftSession = {
   extraMinutes: string;
 };
 
+type FieldName = "exam" | "part" | "mode" | "extraMinutes";
+
 const MODE_LABELS: Record<Mode, string> = {
   paper: "Paper",
   digital: "Digital",
 };
+
+const ALL_MODES: readonly Mode[] = ["paper", "digital"];
 
 const EMPTY_DRAFT: DraftSession = {
   examName: "",
@@ -41,44 +48,33 @@ const EMPTY_DRAFT: DraftSession = {
   extraMinutes: "0",
 };
 
-const FIELDSET_CLASSES = "flex flex-col gap-2 border-0 p-0";
+const NOTHING_TOUCHED: Record<FieldName, boolean> = {
+  exam: false,
+  part: false,
+  mode: false,
+  extraMinutes: false,
+};
 
-const FIELD_HEADER_CLASSES = "flex items-center";
+const REQUIRED_MARK = "required";
+
+const FIELDSET_CLASSES = "flex flex-col gap-2 border-0 p-0";
 
 const LEGEND_CLASSES = "mb-2 text-base font-semibold text-vlec-blue-900";
 
 const MODE_LIST_CLASSES = "flex flex-wrap gap-3";
 
 const MODE_OPTION_CLASSES =
-  "inline-flex cursor-pointer items-center gap-3 rounded-lg border border-vlec-blue-300 px-4 py-3 text-lg has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold";
+  "inline-flex cursor-pointer items-center gap-3 rounded-lg border border-vlec-blue-300 px-4 py-3 text-lg transition-colors hover:border-vlec-blue-500 has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-vlec-blue-700";
 
-const MODE_OPTION_OUTSTANDING_CLASSES =
-  "inline-flex cursor-pointer items-center gap-3 rounded-lg border-2 border-vlec-red-600 bg-vlec-red-50 px-4 py-3 text-lg has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold";
+const MODE_OPTION_INVALID_CLASSES =
+  "inline-flex cursor-pointer items-center gap-3 rounded-lg border-2 border-vlec-red-700 px-4 py-3 text-lg transition-colors has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-vlec-blue-700";
 
 const MODE_OPTION_WAITING_CLASSES =
   "inline-flex cursor-not-allowed items-center gap-3 rounded-lg border border-linguaskill-slate-200 bg-linguaskill-slate-100 px-4 py-3 text-lg text-linguaskill-slate-500";
 
 const RADIO_CLASSES = "h-5 w-5 accent-vlec-blue-900";
 
-const ALL_MODES: readonly Mode[] = ["paper", "digital"];
-
-const missingFieldsHint = (
-  examChosen: boolean,
-  partChosen: boolean,
-  modeChosen: boolean,
-): string | undefined => {
-  const missing = [
-    examChosen ? null : "an exam",
-    partChosen ? null : "a component",
-    modeChosen ? null : "a format",
-  ].filter((entry) => entry !== null);
-  if (missing.length === 0) {
-    return undefined;
-  }
-  return `Still to choose: ${missing.join(", ")}.`;
-};
-
-const REQUIRED_CHIP = "Required";
+const MODE_ICON_CLASSES = "h-5 w-5 shrink-0";
 
 const examByName = (examName: string): Exam | undefined =>
   exams.find((candidate) => candidate.examName === examName);
@@ -113,14 +109,20 @@ const parseExtraMinutes = (value: string): number | null => {
 
 export function SessionDialog({ target, onClose }: SessionDialogProps): ReactElement {
   const [draft, setDraft] = useState<DraftSession>(() => draftFor(target));
+  const [touched, setTouched] = useState<Record<FieldName, boolean>>(NOTHING_TOUCHED);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const [examChoices, setExamChoices] = useState(0);
   const examRef = useRef<HTMLSelectElement>(null);
   const partRef = useRef<HTMLSelectElement>(null);
+  const modeRef = useRef<HTMLInputElement>(null);
+  const extraMinutesRef = useRef<HTMLInputElement>(null);
   const examId = useId();
+  const examErrorId = useId();
   const partId = useId();
+  const partErrorId = useId();
   const extraMinutesId = useId();
   const extraMinutesErrorId = useId();
-  const outstandingId = useId();
+  const modeErrorId = useId();
   const modeGroupName = useId();
 
   const exam = examByName(draft.examName);
@@ -128,13 +130,15 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
   const part = exam?.examParts[partIndex];
   const mode = draft.mode;
   const extraMinutes = parseExtraMinutes(draft.extraMinutes);
-  const canSubmit =
-    exam !== undefined && part !== undefined && mode !== "" && extraMinutes !== null;
   const availableModes = exam?.modes ?? ALL_MODES;
-  const examOutstanding = exam === undefined;
-  const partOutstanding = part === undefined;
-  const modeOutstanding = mode === "";
-  const hint = missingFieldsHint(!examOutstanding, !partOutstanding, !modeOutstanding);
+
+  const showsError = (field: FieldName, invalid: boolean): boolean =>
+    invalid && (saveAttempted || touched[field]);
+
+  const examError = showsError("exam", exam === undefined);
+  const partError = showsError("part", part === undefined);
+  const modeError = showsError("mode", mode === "");
+  const extraMinutesError = showsError("extraMinutes", extraMinutes === null);
 
   useEffect(() => {
     if (examChoices === 0) {
@@ -146,6 +150,26 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
     partRef.current?.focus();
   }, [examChoices]);
 
+  function markTouched(field: FieldName) {
+    setTouched((current) => (current[field] ? current : { ...current, [field]: true }));
+  }
+
+  function handleExamBlur() {
+    markTouched("exam");
+  }
+
+  function handlePartBlur() {
+    markTouched("part");
+  }
+
+  function handleModeBlur() {
+    markTouched("mode");
+  }
+
+  function handleExtraMinutesBlur() {
+    markTouched("extraMinutes");
+  }
+
   function handleExamChange(event: ChangeEvent<HTMLSelectElement>) {
     setDraft((current) => ({
       ...current,
@@ -153,6 +177,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
       partValue: "",
       mode: "",
     }));
+    setTouched((current) => ({ ...current, part: false, mode: false }));
     setExamChoices((count) => count + 1);
   }
 
@@ -169,48 +194,56 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
     setDraft((current) => ({ ...current, extraMinutes: event.target.value }));
   }
 
-  function handleSubmit() {
+  function handleSubmit(): boolean {
     if (exam === undefined || part === undefined || mode === "" || extraMinutes === null) {
-      return;
+      setSaveAttempted(true);
+      if (exam === undefined) {
+        examRef.current?.focus();
+      } else if (part === undefined) {
+        partRef.current?.focus();
+      } else if (mode === "") {
+        modeRef.current?.focus();
+      } else {
+        extraMinutesRef.current?.focus();
+      }
+      return false;
     }
     const config = { examName: exam.examName, partIndex, mode, extraMinutes };
     if (target.kind === "add") {
       addSession(config);
-      return;
+      return true;
     }
     setSessionConfig(target.sessionId, config);
+    return true;
   }
 
   return (
     <ModalDialog
       title={target.kind === "add" ? "Add a session" : "Configure this session"}
       submitLabel="Save"
-      hint={hint}
-      hintId={outstandingId}
-      canSubmit={canSubmit}
       onSubmit={handleSubmit}
       onClose={onClose}
     >
       <div className={DIALOG_FIELD_CLASSES}>
-        <div className={FIELD_HEADER_CLASSES}>
+        <div className={DIALOG_FIELD_HEADER_CLASSES}>
           <label className={DIALOG_LABEL_CLASSES} htmlFor={examId}>
             Exam
           </label>
-          {examOutstanding ? (
-            <span className={DIALOG_REQUIRED_CHIP_CLASSES} aria-hidden="true">
-              {REQUIRED_CHIP}
-            </span>
-          ) : null}
+          <span className={DIALOG_REQUIRED_MARK_CLASSES} aria-hidden="true">
+            {REQUIRED_MARK}
+          </span>
         </div>
         <select
           id={examId}
           ref={examRef}
           data-initial-focus
-          className={examOutstanding ? DIALOG_CONTROL_OUTSTANDING_CLASSES : DIALOG_CONTROL_CLASSES}
+          className={examError ? DIALOG_CONTROL_INVALID_CLASSES : DIALOG_CONTROL_CLASSES}
           value={draft.examName}
           onChange={handleExamChange}
+          onBlur={handleExamBlur}
           required
-          aria-describedby={examOutstanding ? outstandingId : undefined}
+          aria-invalid={examError}
+          aria-describedby={examError ? examErrorId : undefined}
         >
           <option value="">Choose an exam</option>
           {exams.map((candidate) => (
@@ -219,32 +252,34 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
             </option>
           ))}
         </select>
+        {examError ? (
+          <p className={DIALOG_ERROR_CLASSES} id={examErrorId}>
+            <CircleAlert className={DIALOG_ERROR_ICON_CLASSES} aria-hidden="true" />
+            Choose which exam this session is for.
+          </p>
+        ) : null}
       </div>
 
       <div className={DIALOG_FIELD_CLASSES}>
-        <div className={FIELD_HEADER_CLASSES}>
+        <div className={DIALOG_FIELD_HEADER_CLASSES}>
           <label className={DIALOG_LABEL_CLASSES} htmlFor={partId}>
             Component
           </label>
-          {partOutstanding ? (
-            <span className={DIALOG_REQUIRED_CHIP_CLASSES} aria-hidden="true">
-              {REQUIRED_CHIP}
-            </span>
-          ) : null}
+          <span className={DIALOG_REQUIRED_MARK_CLASSES} aria-hidden="true">
+            {REQUIRED_MARK}
+          </span>
         </div>
         <select
           id={partId}
           ref={partRef}
-          className={
-            partOutstanding && !examOutstanding
-              ? DIALOG_CONTROL_OUTSTANDING_CLASSES
-              : DIALOG_CONTROL_CLASSES
-          }
+          className={partError ? DIALOG_CONTROL_INVALID_CLASSES : DIALOG_CONTROL_CLASSES}
           value={draft.partValue}
           onChange={handlePartChange}
+          onBlur={handlePartBlur}
           disabled={exam === undefined}
           required
-          aria-describedby={partOutstanding ? outstandingId : undefined}
+          aria-invalid={partError}
+          aria-describedby={partError ? partErrorId : undefined}
         >
           <option value="">
             {exam === undefined ? "Choose an exam first" : "Choose a component"}
@@ -255,31 +290,31 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
             </option>
           ))}
         </select>
+        {partError ? (
+          <p className={DIALOG_ERROR_CLASSES} id={partErrorId}>
+            <CircleAlert className={DIALOG_ERROR_ICON_CLASSES} aria-hidden="true" />
+            Choose the component being sat.
+          </p>
+        ) : null}
       </div>
 
-      <fieldset className={FIELDSET_CLASSES}>
-        <legend className={LEGEND_CLASSES}>
-          Format
-          {modeOutstanding ? (
-            <span className={DIALOG_REQUIRED_CHIP_CLASSES} aria-hidden="true">
-              {REQUIRED_CHIP}
-            </span>
-          ) : null}
-        </legend>
+      <fieldset className={FIELDSET_CLASSES} onBlur={handleModeBlur}>
+        <legend className={LEGEND_CLASSES}>Format</legend>
         <div className={MODE_LIST_CLASSES}>
-          {availableModes.map((availableMode) => (
+          {availableModes.map((availableMode, index) => (
             <label
               key={availableMode}
               className={
                 exam === undefined
                   ? MODE_OPTION_WAITING_CLASSES
-                  : modeOutstanding
-                    ? MODE_OPTION_OUTSTANDING_CLASSES
+                  : modeError
+                    ? MODE_OPTION_INVALID_CLASSES
                     : MODE_OPTION_CLASSES
               }
             >
               <input
                 className={RADIO_CLASSES}
+                ref={index === 0 ? modeRef : undefined}
                 type="radio"
                 name={modeGroupName}
                 value={availableMode}
@@ -287,14 +322,26 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
                 onChange={handleModeChange}
                 disabled={exam === undefined}
                 required
-                aria-describedby={modeOutstanding ? outstandingId : undefined}
+                aria-invalid={modeError}
+                aria-describedby={modeError ? modeErrorId : undefined}
               />
+              {availableMode === "paper" ? (
+                <FileText className={MODE_ICON_CLASSES} aria-hidden="true" />
+              ) : (
+                <Monitor className={MODE_ICON_CLASSES} aria-hidden="true" />
+              )}
               {MODE_LABELS[availableMode]}
             </label>
           ))}
         </div>
         {exam === undefined ? (
-          <p className={DIALOG_HINT_CLASSES}>Choose an exam to see the formats it is offered in.</p>
+          <p className={DIALOG_HINT_CLASSES}>The formats on offer depend on the exam.</p>
+        ) : null}
+        {modeError ? (
+          <p className={DIALOG_ERROR_CLASSES} id={modeErrorId}>
+            <CircleAlert className={DIALOG_ERROR_ICON_CLASSES} aria-hidden="true" />
+            Say whether this session is on paper or on screen.
+          </p>
         ) : null}
       </fieldset>
 
@@ -304,7 +351,8 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
         </label>
         <input
           id={extraMinutesId}
-          className={DIALOG_CONTROL_CLASSES}
+          ref={extraMinutesRef}
+          className={extraMinutesError ? DIALOG_CONTROL_INVALID_CLASSES : DIALOG_CONTROL_CLASSES}
           type="number"
           min="0"
           max={MAX_EXTRA_MINUTES}
@@ -312,11 +360,13 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
           inputMode="numeric"
           value={draft.extraMinutes}
           onChange={handleExtraMinutesChange}
-          aria-invalid={extraMinutes === null}
-          aria-describedby={extraMinutes === null ? extraMinutesErrorId : undefined}
+          onBlur={handleExtraMinutesBlur}
+          aria-invalid={extraMinutesError}
+          aria-describedby={extraMinutesError ? extraMinutesErrorId : undefined}
         />
-        {extraMinutes === null ? (
-          <p className={DIALOG_ERROR_CLASSES} id={extraMinutesErrorId} role="alert">
+        {extraMinutesError ? (
+          <p className={DIALOG_ERROR_CLASSES} id={extraMinutesErrorId}>
+            <CircleAlert className={DIALOG_ERROR_ICON_CLASSES} aria-hidden="true" />
             Enter whole minutes between 0 and {MAX_EXTRA_MINUTES}.
           </p>
         ) : null}
