@@ -42,6 +42,8 @@ const DEFAULT_BREAK_MINUTES = 15;
 
 const MS_PER_MINUTE = 60_000;
 
+const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
+
 const emptyBoard = (): BoardState => ({
   centreNumber: DEFAULT_CENTRE_NUMBER,
   sessions: [],
@@ -95,6 +97,9 @@ const parseTimerState = (value: unknown): TimerState | null => {
   return null;
 };
 
+const pausedRemainingFitsDuration = (timer: TimerState, durationMs: number): boolean =>
+  timer.status !== "paused" || timer.remainingMs <= durationMs;
+
 const parseMode = (value: unknown): Mode | null =>
   value === "paper" || value === "digital" ? value : null;
 
@@ -121,7 +126,11 @@ const parseSession = (value: unknown): Session | null => {
   if (exam === undefined || exam.examParts[partIndex] === undefined) {
     return null;
   }
-  return { id, examName, partIndex, mode, extraMinutes, timer };
+  const session: Session = { id, examName, partIndex, mode, extraMinutes, timer };
+  if (!pausedRemainingFitsDuration(timer, sessionDurationMs(session))) {
+    return null;
+  }
+  return session;
 };
 
 const parseBreak = (value: unknown): BreakState | null => {
@@ -131,6 +140,9 @@ const parseBreak = (value: unknown): BreakState | null => {
   const timer = parseTimerState(value.timer);
   const { minutes } = value;
   if (timer === null || typeof minutes !== "number" || !Number.isFinite(minutes) || minutes < 0) {
+    return null;
+  }
+  if (!pausedRemainingFitsDuration(timer, minutes * MS_PER_MINUTE)) {
     return null;
   }
   return { timer, minutes };
@@ -217,7 +229,7 @@ const scheduleExpiry = (): void => {
   if (expiryAt === null) {
     return;
   }
-  expiryTimeout = setTimeout(announceExpiry, expiryAt - now);
+  expiryTimeout = setTimeout(announceExpiry, Math.min(expiryAt - now, MAX_TIMEOUT_DELAY_MS));
 };
 
 const applySnapshot = (next: BoardState): void => {
@@ -250,10 +262,14 @@ const restoreSessions = (
 };
 
 export const hydrateFromStorage = (): void => {
+  const stickyFailures = {
+    clockJumpDetected: snapshot.clockJumpDetected,
+    persistFailed: snapshot.persistFailed,
+  };
   const payload = readStoredPayload();
   const stored = payload === null ? null : parseStoredBoard(payload);
   if (stored === null) {
-    applySnapshot({ ...emptyBoard(), restoreDiscarded: payload !== null });
+    applySnapshot({ ...emptyBoard(), ...stickyFailures, restoreDiscarded: payload !== null });
     return;
   }
   const now = Date.now();
@@ -263,10 +279,11 @@ export const hydrateFromStorage = (): void => {
   });
   applySnapshot({
     ...emptyBoard(),
+    ...stickyFailures,
     centreNumber: stored.centreNumber,
     sessions: restoredSessions.sessions,
     break: { ...stored.break, timer: restoredBreak.state },
-    clockJumpDetected: restoredSessions.clamped,
+    clockJumpDetected: stickyFailures.clockJumpDetected || restoredSessions.clamped,
   });
 };
 
@@ -323,7 +340,9 @@ const updateSessionTimer = (
 };
 
 export const startSession = (id: string): void => {
-  updateSessionTimer(id, (session, now) => start(sessionDurationMs(session), now));
+  updateSessionTimer(id, (session, now) =>
+    session.timer.status === "running" ? session.timer : start(sessionDurationMs(session), now),
+  );
 };
 
 export const pauseSession = (id: string): void => {

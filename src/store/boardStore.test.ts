@@ -18,6 +18,7 @@ import type { Session } from "./boardStore";
 
 const EXAM_START = new Date("2026-06-11T09:00:00.000Z");
 const READING_MS = 75 * 60_000;
+const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
 
 const idleSession = {
   id: "reading",
@@ -28,15 +29,18 @@ const idleSession = {
   timer: { status: "idle" },
 };
 
-const storedBoard = (sessions: readonly unknown[]): string =>
+const storedBoard = (
+  sessions: readonly unknown[],
+  breakTimer: unknown = { status: "idle" },
+): string =>
   JSON.stringify({
     centreNumber: "ES432",
     sessions,
-    break: { timer: { status: "idle" }, minutes: 15 },
+    break: { timer: breakTimer, minutes: 15 },
   });
 
-const seed = (sessions: readonly unknown[]): void => {
-  localStorage.setItem(STORAGE_KEY, storedBoard(sessions));
+const seed = (sessions: readonly unknown[], breakTimer?: unknown): void => {
+  localStorage.setItem(STORAGE_KEY, storedBoard(sessions, breakTimer));
   hydrateFromStorage();
 };
 
@@ -53,6 +57,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(EXAM_START);
   localStorage.clear();
+  setClockJumpDetected(false);
   hydrateFromStorage();
 });
 
@@ -213,6 +218,37 @@ describe("restore", () => {
     expect(getSnapshot().clockJumpDetected).toBe(true);
   });
 
+  it("keeps a paused session that fits inside its component", () => {
+    seed([{ ...idleSession, timer: { status: "paused", remainingMs: READING_MS } }]);
+
+    expect(timerOf("reading")).toEqual({ status: "paused", remainingMs: READING_MS });
+    expect(getSnapshot().restoreDiscarded).toBe(false);
+  });
+
+  it("keeps a break that has run into overtime", () => {
+    const endsAt = EXAM_START.getTime() - 3 * 60_000;
+    seed([idleSession], { status: "running", endsAt });
+
+    expect(getSnapshot().break.timer).toEqual({ status: "running", endsAt });
+    expect(getSnapshot().restoreDiscarded).toBe(false);
+  });
+
+  it("clamps a far-future expiry instead of scheduling an overflowing timeout", () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const endsAt = EXAM_START.getTime() + 60 * 24 * 60 * 60_000;
+
+    seed([idleSession], { status: "running", endsAt });
+
+    const scheduledDelays = setTimeoutSpy.mock.calls.map(([, delay]) => delay ?? 0);
+    expect(Math.max(...scheduledDelays)).toBe(MAX_TIMEOUT_DELAY_MS);
+
+    setTimeoutSpy.mockClear();
+    vi.advanceTimersByTime(MAX_TIMEOUT_DELAY_MS);
+
+    expect(setTimeoutSpy.mock.calls.map(([, delay]) => delay)).toEqual([MAX_TIMEOUT_DELAY_MS]);
+    expect(getSnapshot().break.timer).toEqual({ status: "running", endsAt });
+  });
+
   it("starts clean without flagging a discard when nothing was stored", () => {
     localStorage.clear();
 
@@ -233,6 +269,14 @@ describe("restore", () => {
     ["a session with an unknown exam", storedBoard([{ ...idleSession, examName: "B9 Mastery" }])],
     ["a session with an out-of-range part", storedBoard([{ ...idleSession, partIndex: 9 }])],
     ["more sessions than the board allows", storedBoard(Array(5).fill(idleSession))],
+    [
+      "a paused session holding more time than its component allows",
+      storedBoard([{ ...idleSession, timer: { status: "paused", remainingMs: 999_999_999 } }]),
+    ],
+    [
+      "a paused break holding more time than the break allows",
+      storedBoard([idleSession], { status: "paused", remainingMs: 999_999_999 }),
+    ],
   ])("discards %s and reports it", (_scenario, payload) => {
     localStorage.setItem(STORAGE_KEY, payload);
 
@@ -257,6 +301,37 @@ describe("cross-tab sync", () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(Object.is(before, getSnapshot())).toBe(false);
     expect(getSnapshot().sessions).toHaveLength(1);
+    unsubscribe();
+  });
+
+  it("keeps a raised clock-jump warning while adopting that board", () => {
+    seed([idleSession]);
+    const unsubscribe = subscribe(vi.fn());
+    setClockJumpDetected(true);
+
+    localStorage.setItem(STORAGE_KEY, storedBoard([{ ...idleSession, id: "writing" }]));
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+
+    expect(getSnapshot().sessions.map((session) => session.id)).toEqual(["writing"]);
+    expect(getSnapshot().clockJumpDetected).toBe(true);
+    unsubscribe();
+  });
+
+  it("keeps a persistence failure visible while adopting that board", () => {
+    seed([idleSession]);
+    const unsubscribe = subscribe(vi.fn());
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
+      throw new Error("QuotaExceededError");
+    });
+
+    startSession("reading");
+    expect(getSnapshot().persistFailed).toBe(true);
+
+    setItem.mockRestore();
+    localStorage.setItem(STORAGE_KEY, storedBoard([idleSession]));
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+
+    expect(getSnapshot().persistFailed).toBe(true);
     unsubscribe();
   });
 
@@ -320,6 +395,21 @@ describe("session lifecycle", () => {
 
     expect(getSnapshot().sessions.map((session) => session.id)).toEqual(["reading"]);
     expect(endsAtOf("reading")).toBe(readingEndsAt);
+  });
+
+  it("leaves a running countdown alone when start is pressed again", () => {
+    seed([idleSession]);
+    startSession("reading");
+    const startedEndsAt = endsAtOf("reading");
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    vi.advanceTimersByTime(30 * 60_000);
+    startSession("reading");
+
+    expect(endsAtOf("reading")).toBe(startedEndsAt);
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
   });
 
   it("re-seeds a session from its new configuration", () => {
