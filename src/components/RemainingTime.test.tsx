@@ -90,6 +90,7 @@ describe("anchoring", () => {
 
     render(
       <RemainingTime
+        label={null}
         timer={timer}
         durationMs={READING_MS}
         onThresholdCross={noThresholdHandling}
@@ -105,6 +106,7 @@ describe("anchoring", () => {
   it("shows the whole allowed time while the session is idle", () => {
     render(
       <RemainingTime
+        label={null}
         timer={{ status: "idle" }}
         durationMs={READING_MS}
         onThresholdCross={noThresholdHandling}
@@ -124,7 +126,7 @@ describe("threshold crossings", () => {
     const timer: TimerState = { status: "running", endsAt: Date.now() + 11 * 60_000 };
 
     render(
-      <RemainingTime timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
+      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
     );
 
     expect(crossings).toEqual([]);
@@ -144,12 +146,12 @@ describe("threshold crossings", () => {
     const timer: TimerState = { status: "running", endsAt: Date.now() + 11 * 60_000 };
 
     const view = render(
-      <RemainingTime timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
+      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
     );
 
     advance(DISPLAY_TICK_MS * 4);
     view.rerender(
-      <RemainingTime timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
+      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
     );
 
     expect(crossings).toEqual([]);
@@ -163,6 +165,7 @@ describe("width reservation", () => {
     const reservations = values.map((remaining) => {
       const view = render(
         <RemainingTime
+        label={null}
           timer={{ status: "running", endsAt: Date.now() + remaining }}
           durationMs={durationMs}
           onThresholdCross={noThresholdHandling}
@@ -184,6 +187,7 @@ describe("width reservation", () => {
     const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
       const view = render(
         <RemainingTime
+        label={null}
           timer={{ status: "running", endsAt: Date.now() + remaining }}
           durationMs={durationMs}
           onThresholdCross={noThresholdHandling}
@@ -204,6 +208,7 @@ describe("never counting upward", () => {
     seedIdleReadingSession();
     const view = render(
       <RemainingTime
+        label={null}
         timer={{ status: "idle" }}
         durationMs={READING_MS}
         onThresholdCross={noThresholdHandling}
@@ -220,6 +225,7 @@ describe("never counting upward", () => {
 
     view.rerender(
       <RemainingTime
+        label={null}
         timer={started}
         durationMs={READING_MS}
         onThresholdCross={noThresholdHandling}
@@ -233,7 +239,7 @@ describe("never counting upward", () => {
     const durationMs = 12 * 60_000;
     const timer: TimerState = { status: "running", endsAt: Date.now() + durationMs };
     render(
-      <RemainingTime timer={timer} durationMs={durationMs} onThresholdCross={noThresholdHandling} />,
+      <RemainingTime label={null} timer={timer} durationMs={durationMs} onThresholdCross={noThresholdHandling} />,
     );
 
     let previous = remainingMs(timer, Date.now());

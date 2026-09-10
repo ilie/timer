@@ -60,18 +60,18 @@ const REQUIRED_MARK = "required";
 
 const FIELDSET_CLASSES = "flex flex-col gap-2 border-0 p-0";
 
-const LEGEND_CLASSES = "mb-2 text-base font-semibold text-vlec-blue-900";
+const LEGEND_CLASSES = "mb-2 text-base font-medium text-linguaskill-slate-700";
 
 const MODE_LIST_CLASSES = "flex flex-wrap gap-3";
 
 const MODE_OPTION_CLASSES =
-  "inline-flex cursor-pointer items-center gap-3 rounded-lg border border-vlec-blue-300 px-4 py-3 text-lg transition-colors hover:border-vlec-blue-500 has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-vlec-blue-700";
+  "inline-flex cursor-pointer items-center gap-3 rounded-lg border border-linguaskill-slate-300 px-4 py-3 text-lg transition-colors hover:border-linguaskill-slate-400 has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-medium has-checked:text-vlec-blue-900 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-vlec-blue-700";
 
 const MODE_OPTION_INVALID_CLASSES =
   "inline-flex cursor-pointer items-center gap-3 rounded-lg border-2 border-vlec-red-700 px-4 py-3 text-lg transition-colors has-checked:border-vlec-blue-900 has-checked:bg-vlec-blue-50 has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-vlec-blue-700";
 
 const MODE_OPTION_WAITING_CLASSES =
-  "inline-flex cursor-not-allowed items-center gap-3 rounded-lg border border-linguaskill-slate-200 bg-linguaskill-slate-100 px-4 py-3 text-lg text-linguaskill-slate-500";
+  "inline-flex cursor-not-allowed items-center gap-3 rounded-lg border border-linguaskill-slate-200 bg-linguaskill-slate-50 px-4 py-3 text-lg text-linguaskill-slate-400";
 
 const RADIO_CLASSES = "h-5 w-5 accent-vlec-blue-900";
 
@@ -220,7 +220,7 @@ export function SessionDialog({ target, onClose }: SessionDialogProps): ReactEle
 
   return (
     <ModalDialog
-      title={target.kind === "add" ? "Add a session" : "Configure this session"}
+      title={target.kind === "add" ? "Add a Session" : "Configure This Session"}
       titleIcon={target.kind === "add" ? CalendarPlus : Pencil}
       submitLabel="Save"
       onSubmit={handleSubmit}

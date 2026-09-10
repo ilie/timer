@@ -96,7 +96,7 @@ describe("board grid", () => {
     const { unmount } = render(
       <Board onAddSession={requestAddSession} onEditSession={requestEditSession} onEditCentreNumber={requestEditCentreNumber} />,
     );
-    const addButton = screen.getByRole("button", { name: "Add session" });
+    const addButton = screen.getByRole("button", { name: "Add Session" });
 
     expect(addButton).toBeEnabled();
 
@@ -116,7 +116,7 @@ describe("board grid", () => {
     render(<Board onAddSession={requestAddSession} onEditSession={requestEditSession} onEditCentreNumber={requestEditCentreNumber} />);
 
     expect(screen.getAllByRole("columnheader")).toHaveLength(MAX_SESSIONS);
-    expect(screen.getByRole("button", { name: "Add session" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add Session" })).toBeDisabled();
   });
 
   it("asks to configure the session whose tab is clicked", () => {
@@ -181,6 +181,36 @@ describe("board grid", () => {
     expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument();
   });
+
+  it("leaves a column with no countdown genuinely empty and merges its two rows", () => {
+    seed([
+      { ...paperSession("digital", "B2 First", 0), mode: "digital" },
+      paperSession("listening", "B2 First", 2),
+      paperSession("paper", "C1 Advanced", 0),
+    ]);
+
+    render(<Board onAddSession={requestAddSession} onEditSession={requestEditSession} onEditCentreNumber={requestEditCentreNumber} />);
+
+    expect(screen.queryByText("—")).not.toBeInTheDocument();
+    expect(within(rowOf("Remaining")).getAllByRole("cell")).toHaveLength(4);
+    expect(within(rowOf("Controls")).getAllByRole("cell")).toHaveLength(2);
+
+    const merged = within(rowOf("Remaining"))
+      .getAllByRole("cell")
+      .filter((cell) => cell.getAttribute("rowspan") === "2");
+    expect(merged).toHaveLength(2);
+    for (const cell of merged) {
+      expect(cell).toBeEmptyDOMElement();
+    }
+    expect(screen.getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
+      "Exam",
+      "Part",
+      "Time",
+      "Remaining",
+      "Controls",
+    ]);
+  });
+
 });
 
 describe("destructive confirmations", () => {
@@ -225,7 +255,7 @@ describe("destructive confirmations", () => {
 
     expect(screen.getByText(/still has/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close session" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close Session" }));
 
     expect(getSnapshot().sessions).toHaveLength(0);
   });
@@ -239,7 +269,7 @@ describe("destructive confirmations", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(getSnapshot().sessions[0]?.timer).toMatchObject({ status: "running" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset countdown" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset Countdown" }));
 
     expect(getSnapshot().sessions[0]?.timer).toEqual({ status: "idle" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

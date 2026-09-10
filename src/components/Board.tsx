@@ -1,8 +1,8 @@
 import { useState, useSyncExternalStore } from "react";
 import type { ReactElement, ReactNode } from "react";
-import { Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { RemainingTime } from "./RemainingTime";
+import { COLUMN_LABEL_CLASSES, RemainingTime } from "./RemainingTime";
 import { SessionControls, describeSession } from "./SessionColumn";
 import type { SessionView } from "./SessionColumn";
 import { MAX_SESSIONS } from "../config/board";
@@ -38,18 +38,20 @@ type PendingAction = {
 
 type BoardRowSpec = {
   label: string;
-  cellClasses: string;
   labelledPerColumn: boolean;
+  cellClassesFor: (column: SessionView) => string;
+  rowSpanFor?: (column: SessionView) => number | undefined;
+  omitsCell?: (column: SessionView) => boolean;
   render: (column: SessionView) => ReactNode;
 };
-
-const NO_COUNTDOWN = "—";
 
 const BOARD_CLASSES =
   "group/board @container/board flex h-full min-h-0 w-full flex-col gap-1";
 
 const CENTRE_NUMBER_CLASSES =
-  "mr-auto shrink-0 cursor-pointer rounded-md px-1 text-left font-semibold uppercase tracking-[0.2em] text-vlec-blue-700 transition-colors hover:bg-vlec-blue-50 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-label group-data-[density=compact]/board:text-column-label";
+  "mr-auto inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left font-medium uppercase tracking-[0.14em] text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-100 hover:text-linguaskill-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-column-label";
+
+const CENTRE_NUMBER_ICON_CLASSES = "h-[0.7em] w-[0.7em] shrink-0";
 
 const GRID_CLASSES = "h-full w-full table-fixed border-collapse";
 
@@ -61,57 +63,58 @@ const COLLAPSED_LABEL_COLUMN_CLASSES = "w-0";
 
 const ADD_COLUMN_CLASSES = "w-16 @max-[60rem]/board:w-12";
 
-const SESSION_COLUMN_CLASSES = "border-r border-dashed border-linguaskill-slate-300";
+const SESSION_COLUMN_CLASSES = "border-r border-dashed border-linguaskill-slate-200";
 
 const LAST_SESSION_COLUMN_CLASSES = "border-0";
 
-const TAB_CELL_CLASSES = "align-bottom px-1 pt-1";
+const TAB_CELL_CLASSES = "border-b border-linguaskill-slate-200 px-1 pt-2 align-bottom";
+
+const STRIP_EDGE_CLASSES = "border-b border-linguaskill-slate-200 p-0";
+
+const ADD_CELL_CLASSES = "border-b border-linguaskill-slate-200 px-1 pt-2 align-bottom";
 
 const TAB_CLASSES =
-  "flex w-full items-center justify-between gap-2 rounded-t-xl bg-vlec-blue-900 px-3 py-2 text-left text-white";
+  "group/tab -mb-px flex w-full items-center justify-between gap-1 rounded-t-lg border border-b-0 border-linguaskill-slate-200 bg-linguaskill-slate-50 px-3 py-2 text-left text-column-label";
 
 const TAB_LABEL_CLASSES =
-  "min-w-0 flex-1 truncate rounded-md text-left font-semibold tracking-wide text-tab transition-colors group-data-[density=compact]/board:text-tab-compact hover:text-vlec-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+  "min-w-0 flex-1 truncate rounded text-left font-medium text-linguaskill-slate-600 transition-colors hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
 
 const TAB_CLOSE_CLASSES =
-  "inline-flex shrink-0 items-center justify-center rounded-lg p-2 text-vlec-blue-100 transition-colors hover:bg-vlec-red-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+  "inline-flex shrink-0 items-center justify-center rounded p-1 text-linguaskill-slate-300 transition-colors group-hover/tab:text-linguaskill-slate-500 hover:bg-linguaskill-slate-200 hover:text-linguaskill-slate-900 focus-visible:text-linguaskill-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
 
 const ADD_BUTTON_CLASSES =
-  "inline-flex w-full items-center justify-center rounded-xl bg-vlec-blue-700 p-2 text-white transition-colors hover:bg-vlec-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-linguaskill-slate-200 disabled:text-linguaskill-slate-500";
+  "-mb-px inline-flex w-full items-center justify-center rounded-t-lg border border-b-0 border-transparent px-3 py-2 text-column-label text-linguaskill-slate-400 transition-colors hover:border-linguaskill-slate-200 hover:bg-linguaskill-slate-50 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-transparent disabled:text-linguaskill-slate-200";
 
 const ROW_LABEL_CLASSES =
-  "border-b border-vlec-blue-100 bg-vlec-blue-50 px-4 py-1 text-right align-middle font-semibold uppercase tracking-wide text-vlec-blue-900 text-label group-data-[density=compact]/board:text-label-compact";
+  "px-5 py-2 text-right align-middle font-medium uppercase tracking-[0.14em] text-linguaskill-slate-400 text-column-label";
 
 const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
 
-const CELL_LABEL_CLASSES =
-  "block font-semibold uppercase leading-tight tracking-[0.18em] text-vlec-blue-600 text-column-label group-data-[density=compact]/board:text-column-label-compact";
-
 const ROW_CLASSES = "align-middle";
 
+const COUNTDOWN_ROW_CLASSES = "h-[45%] align-middle";
+
 const VALUE_CELL_CLASSES =
-  "border-b border-vlec-blue-100 px-3 py-1 text-center align-middle text-linguaskill-slate-900 text-exam group-data-[density=compact]/board:text-exam-compact";
+  "px-3 py-2 text-center align-middle text-balance text-linguaskill-slate-900 text-exam group-data-[density=compact]/board:text-exam-compact";
 
-const REMAINING_CELL_CLASSES = "border-b border-vlec-blue-100 px-2 py-1 text-center align-middle";
+const REMAINING_CELL_CLASSES = "relative";
 
-const CONTROLS_CELL_CLASSES = "px-3 py-1 text-center align-middle";
+const CONTROLS_CELL_CLASSES = "px-3 py-2 text-center align-middle";
 
-const SPACER_CELL_CLASSES = "border-b border-vlec-blue-100";
+const SPACER_CELL_CLASSES = "";
 
 const EXTRA_TIME_CLASSES =
-  "ml-2 rounded-md bg-linguaskill-slate-200 px-2 py-0.5 font-semibold text-linguaskill-slate-900";
+  "ml-2 rounded-md bg-linguaskill-slate-100 px-2 py-0.5 font-medium text-linguaskill-slate-600";
 
-const NO_COUNTDOWN_CLASSES =
-  "font-semibold text-linguaskill-slate-400 text-exam group-data-[density=compact]/board:text-exam-compact";
+const NO_COUNTDOWN_CELL_CLASSES = "";
 
 const EMPTY_BOARD_CLASSES =
-  "flex h-full flex-col items-center justify-center gap-4 rounded-xl bg-vlec-blue-50 text-center font-semibold text-vlec-blue-900 text-exam";
+  "flex h-full flex-col items-center justify-center gap-6 text-center text-linguaskill-slate-400 text-exam";
 
 const EMPTY_BOARD_BUTTON_CLASSES =
-  "inline-flex items-center gap-3 rounded-xl bg-vlec-blue-700 px-6 py-3 text-white transition-colors hover:bg-vlec-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
+  "inline-flex items-center gap-2 rounded-lg bg-vlec-blue-900 px-5 py-2.5 text-base font-medium text-white transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
 
-const TAB_ICON_CLASSES =
-  "h-[1em] w-[1em] text-tab group-data-[density=compact]/board:text-tab-compact";
+const TAB_ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 
 let clockSample = { revision: -1, now: 0 };
 
@@ -187,6 +190,7 @@ export function Board({
     describeSession(session, index + 1, density, now),
   );
   const labelColumnVisible = columns.length === 1;
+  const anyColumnCountsDown = columns.some((column) => column.countsDown);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   useUnloadGuard(columns.some((column) => column.status === "running"));
@@ -224,22 +228,22 @@ export function Board({
     setPendingAction(null);
   }
 
-  const rows: BoardRowSpec[] = [
+  const supportingRows: BoardRowSpec[] = [
     {
       label: "Exam",
-      cellClasses: VALUE_CELL_CLASSES,
+      cellClassesFor: () => VALUE_CELL_CLASSES,
       labelledPerColumn: true,
       render: (column) => column.examLabel,
     },
     {
       label: "Part",
-      cellClasses: VALUE_CELL_CLASSES,
+      cellClassesFor: () => VALUE_CELL_CLASSES,
       labelledPerColumn: true,
       render: (column) => column.partName,
     },
     {
       label: "Time",
-      cellClasses: VALUE_CELL_CLASSES,
+      cellClassesFor: () => VALUE_CELL_CLASSES,
       labelledPerColumn: true,
       render: (column) =>
         column.extraMinutes > 0 ? (
@@ -251,28 +255,35 @@ export function Board({
           column.allowedTime
         ),
     },
+  ];
+
+  const countdownRows: BoardRowSpec[] = [
     {
       label: "Remaining",
-      cellClasses: REMAINING_CELL_CLASSES,
-      labelledPerColumn: true,
+      cellClassesFor: (column) =>
+        column.countsDown ? REMAINING_CELL_CLASSES : NO_COUNTDOWN_CELL_CLASSES,
+      rowSpanFor: (column) => (column.countsDown ? undefined : 2),
+      labelledPerColumn: false,
       render: (column) =>
         column.countsDown ? (
           <RemainingTime
+            label={labelColumnVisible ? null : "Remaining"}
             timer={column.timer}
             durationMs={column.durationMs}
             onThresholdCross={handleThresholdCross}
           />
-        ) : (
-          <span className={NO_COUNTDOWN_CLASSES}>{NO_COUNTDOWN}</span>
-        ),
+        ) : null,
     },
     {
       label: "Controls",
-      cellClasses: CONTROLS_CELL_CLASSES,
+      cellClassesFor: () => CONTROLS_CELL_CLASSES,
+      omitsCell: (column) => !column.countsDown,
       labelledPerColumn: false,
       render: (column) => <SessionControls view={column} onRequestReset={handleResetRequest} />,
     },
   ];
+
+  const rows = anyColumnCountsDown ? [...supportingRows, ...countdownRows] : supportingRows;
 
   return (
     <section className={BOARD_CLASSES} data-density={density} data-columns={columns.length}>
@@ -282,14 +293,15 @@ export function Board({
         aria-label="Edit centre number"
         onClick={onEditCentreNumber}
       >
+        <Pencil className={CENTRE_NUMBER_ICON_CLASSES} aria-hidden="true" />
         Centre no: {board.centreNumber}
       </button>
       {columns.length === 0 ? (
         <div className={EMPTY_BOARD_CLASSES}>
-          <p>No sessions yet.</p>
+          <p className="text-pretty">No sessions yet.</p>
           <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
-            <Plus className="h-[1em] w-[1em]" aria-hidden="true" />
-            Add session
+            <Plus className="h-[1.15em] w-[1.15em]" aria-hidden="true" />
+            Add Session
           </button>
         </div>
       ) : (
@@ -315,8 +327,8 @@ export function Board({
               <col className={ADD_COLUMN_CLASSES} />
             </colgroup>
             <thead>
-              <tr className="h-px">
-                <td className="p-0"></td>
+              <tr>
+                <td className={STRIP_EDGE_CLASSES}></td>
                 {columns.map((column) => (
                   <th key={column.id} className={TAB_CELL_CLASSES} scope="col">
                     <span className={TAB_CLASSES}>
@@ -329,11 +341,11 @@ export function Board({
                     </span>
                   </th>
                 ))}
-                <td className="align-bottom pb-1 pl-1">
+                <td className={ADD_CELL_CLASSES}>
                   <button
                     className={ADD_BUTTON_CLASSES}
                     type="button"
-                    aria-label="Add session"
+                    aria-label="Add Session"
                     onClick={onAddSession}
                     disabled={columns.length >= MAX_SESSIONS}
                   >
@@ -344,23 +356,36 @@ export function Board({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.label} className={ROW_CLASSES}>
+                <tr
+                  key={row.label}
+                  className={
+                    row.label === "Remaining" && anyColumnCountsDown
+                      ? COUNTDOWN_ROW_CLASSES
+                      : ROW_CLASSES
+                  }
+                >
                   <th
                     className={labelColumnVisible ? ROW_LABEL_CLASSES : COLLAPSED_ROW_LABEL_CLASSES}
                     scope="row"
                   >
                     {labelColumnVisible ? row.label : <span className="sr-only">{row.label}</span>}
                   </th>
-                  {columns.map((column) => (
-                    <td key={column.id} className={row.cellClasses}>
-                      {!labelColumnVisible && row.labelledPerColumn ? (
-                        <span aria-hidden="true" className={CELL_LABEL_CLASSES}>
-                          {row.label}
-                        </span>
-                      ) : null}
-                      {row.render(column)}
-                    </td>
-                  ))}
+                  {columns.map((column) => {
+                    if (row.omitsCell !== undefined && row.omitsCell(column)) {
+                      return null;
+                    }
+                    const rowSpan = row.rowSpanFor === undefined ? undefined : row.rowSpanFor(column);
+                    return (
+                      <td key={column.id} className={row.cellClassesFor(column)} rowSpan={rowSpan}>
+                        {!labelColumnVisible && row.labelledPerColumn && rowSpan === undefined ? (
+                          <span aria-hidden="true" className={COLUMN_LABEL_CLASSES}>
+                            {row.label}
+                          </span>
+                        ) : null}
+                        {row.render(column)}
+                      </td>
+                    );
+                  })}
                   <td className={SPACER_CELL_CLASSES}></td>
                 </tr>
               ))}
@@ -370,14 +395,14 @@ export function Board({
       )}
       {pendingAction !== null && (
         <ConfirmDialog
-          title={pendingAction.kind === "remove" ? "Close this session?" : "Reset this countdown?"}
+          title={pendingAction.kind === "remove" ? "Close This Session?" : "Reset This Countdown?"}
           message={
             pendingAction.kind === "remove"
               ? "Closing removes the column and its countdown from the board."
               : "Resetting returns the countdown to the full allowed time."
           }
           detail={`${pendingAction.examLabel} — ${pendingAction.partName} still has ${pendingAction.remaining} left.`}
-          confirmLabel={pendingAction.kind === "remove" ? "Close session" : "Reset countdown"}
+          confirmLabel={pendingAction.kind === "remove" ? "Close Session" : "Reset Countdown"}
           onConfirm={handleConfirmPendingAction}
           onClose={handleClosePendingAction}
         />

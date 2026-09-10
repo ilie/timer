@@ -4,7 +4,7 @@ import CAMBRIDGE from "../../Assets/img/Authorised-Platinum-Centre_Logo_RGB_OUTL
 import CAMBRIDGE23 from "../../Assets/img/Cambridge_Platinum_Centre_2023.svg";
 const Header = () => {
   return (
-    <header className="flex shrink-0 items-center justify-between bg-white px-8 py-3">
+    <header className="flex shrink-0 items-center justify-between gap-8 border-b border-linguaskill-slate-200 bg-white px-8 py-4">
       <img className="h-[8.5vh] max-h-32 w-auto" src={VLEC} alt="Virginia Lyons Exam Centre" />
       <img
         className="h-[8.5vh] max-h-32 w-auto"

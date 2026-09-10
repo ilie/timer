@@ -52,7 +52,7 @@ export function BoardSettingsDialog({ onClose }: BoardSettingsDialogProps): Reac
 
   return (
     <ModalDialog
-      title="Board settings"
+      title="Board Settings"
       titleIcon={Building2}
       submitLabel="Save"
       onSubmit={handleSubmit}

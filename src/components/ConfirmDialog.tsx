@@ -11,9 +11,9 @@ type ConfirmDialogProps = {
   onClose: () => void;
 };
 
-const MESSAGE_CLASSES = "text-lg text-linguaskill-slate-900";
+const MESSAGE_CLASSES = "text-pretty text-lg text-linguaskill-slate-600";
 
-const DETAIL_CLASSES = "text-lg font-semibold text-vlec-red-700";
+const DETAIL_CLASSES = "text-pretty text-lg font-medium text-linguaskill-slate-900";
 
 export function ConfirmDialog({
   title,

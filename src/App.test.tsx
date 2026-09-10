@@ -45,7 +45,7 @@ const seedOneSession = () => {
 };
 
 const openAddDialog = async (user: UserEvent) => {
-  await user.click(screen.getByRole("button", { name: "Add session" }));
+  await user.click(screen.getByRole("button", { name: "Add Session" }));
 };
 
 const openTabDialog = async (user: UserEvent, examLabel: string) => {

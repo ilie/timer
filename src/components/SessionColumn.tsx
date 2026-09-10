@@ -35,15 +35,15 @@ type SessionControlsProps = {
 
 const NOT_APPLICABLE = "—";
 
-const CONTROLS_CLASSES = "flex flex-wrap items-center justify-center gap-2 py-1";
+const CONTROLS_CLASSES = "flex flex-wrap items-center justify-center gap-2";
 
 const PRIMARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-lg bg-vlec-blue-900 px-3 py-1.5 font-semibold text-white text-label transition-colors group-data-[density=compact]/board:text-label-compact hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
+  "inline-flex items-center gap-2 rounded-lg bg-vlec-blue-900 px-4 py-2 font-medium text-white text-column-label transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
 
 const SECONDARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-lg bg-linguaskill-slate-200 px-3 py-1.5 font-semibold text-linguaskill-slate-900 text-label transition-colors group-data-[density=compact]/board:text-label-compact hover:bg-linguaskill-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-600";
+  "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium text-linguaskill-slate-500 text-column-label transition-colors hover:bg-linguaskill-slate-100 hover:text-linguaskill-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-500";
 
-const ICON_CLASSES = "h-[1em] w-[1em]";
+const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 
 const runControlLabels = {
   idle: "Start",
@@ -77,6 +77,7 @@ export function describeSession(
   }
 
   const nextPart = exam.examParts[session.partIndex + 1];
+  const countsDown = part.qualifier === "exact" && session.mode === "paper";
 
   return {
     id: session.id,
@@ -85,7 +86,7 @@ export function describeSession(
     partName: partLabel(part.name, density),
     allowedTime: formatAllowedTime(part.minutes + session.extraMinutes, part.qualifier),
     extraMinutes: session.extraMinutes,
-    countsDown: part.qualifier === "exact" && session.mode === "paper",
+    countsDown,
     timer: session.timer,
     durationMs: sessionDurationMs(session),
     status: statusOf(session.timer, now),
