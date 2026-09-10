@@ -1,6 +1,7 @@
 export const Exams = [
   {
     examName: "Pre A1 Starters",
+    shortName: "Starters",
     examParts: [
       {
         id: "PRE-A1-01",
@@ -18,6 +19,7 @@ export const Exams = [
   },
   {
     examName: "A1 Movers",
+    shortName: "Movers",
     examParts: [
       {
         id: "A1-01",
@@ -35,6 +37,7 @@ export const Exams = [
   },
   {
     examName: "A2 Flyers",
+    shortName: "Flyers",
     examParts: [
       {
         id: "A2-01",
@@ -52,6 +55,7 @@ export const Exams = [
   },
   {
     examName: "A2 Key",
+    shortName: "KET",
     examParts: [
       {
         id: "Key-01",
@@ -69,6 +73,7 @@ export const Exams = [
   },
   {
     examName: "A2 Key for Schools",
+    shortName: "KET fS",
     examParts: [
       {
         id: "KeyfS-01",
@@ -86,6 +91,7 @@ export const Exams = [
   },
   {
     examName: "B1 Preliminary",
+    shortName: "PET",
     examParts: [
       {
         id: "B1-01",
@@ -109,6 +115,7 @@ export const Exams = [
   },
   {
     examName: "B1 Preliminary for Schools",
+    shortName: "PET fS",
     examParts: [
       {
         id: "B1fS-01",
@@ -132,6 +139,7 @@ export const Exams = [
   },
   {
     examName: "B2 First",
+    shortName: "FCE",
     examParts: [
       {
         id: "B2-01",
@@ -155,6 +163,7 @@ export const Exams = [
   },
   {
     examName: "B2 First for Schools",
+    shortName: "FCE fS",
     examParts: [
       {
         id: "B2fS-01",
@@ -178,6 +187,7 @@ export const Exams = [
   },
   {
     examName: "C1 Advanced",
+    shortName: "CAE",
     examParts: [
       {
         id: "C1-01",
@@ -201,10 +211,12 @@ export const Exams = [
   },
   {
     examName: "C2 Proficiency",
+    shortName: "CPE",
     examParts: [
       {
         id: "C2-01",
         name: "Reading & Use of English",
+        shortName: "Reading & Use of Eng.",
         time: "1h. 30 min.",
         minutes: 90,
       },
@@ -224,21 +236,28 @@ export const Exams = [
   },
   {
     examName: "Linguaskill",
+    shortName: "Lsk",
     examParts: [
       {
         id: "LSK-01",
-        name: "Reading & Listening",
-        time: "1h. 30 min. max.",
-        minutes: 90,
+        name: "Reading",
+        time: "45 min",
+        minutes: 45,
       },
       {
         id: "LSK-02",
+        name: "Listening",
+        time: "45 min",
+        minutes: 45,
+      },
+      {
+        id: "LSK-03",
         name: "Writing",
         time: "45 min.",
         minutes: 45,
       },
       {
-        id: "LSK-03",
+        id: "LSK-04",
         name: "Speaking",
         time: "Approx. 15 minutes",
         minutes: 15,
