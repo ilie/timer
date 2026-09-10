@@ -1,7 +1,13 @@
 import type { ReactElement } from "react";
 import { ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
 import { exams } from "../config/exams";
-import { composeExamLabel, formatAllowedTime, partLabel } from "../lib/format";
+import {
+  composeExamLabel,
+  examDisplayName,
+  formatAllowedTime,
+  marksDigitalMode,
+  partLabel,
+} from "../lib/format";
 import type { Density } from "../lib/format";
 import { statusOf } from "../lib/timer";
 import type { TimerState, TimerStatus } from "../lib/timer";
@@ -18,6 +24,8 @@ export type SessionView = {
   id: string;
   number: number;
   examLabel: string;
+  examName: string;
+  digital: boolean;
   partName: string;
   allowedTime: string;
   extraMinutes: number;
@@ -35,13 +43,13 @@ type SessionControlsProps = {
 
 const NOT_APPLICABLE = "—";
 
-const CONTROLS_CLASSES = "flex flex-wrap items-center justify-center gap-2";
+const CONTROLS_CLASSES = "inline-flex flex-wrap items-center gap-3";
 
 const PRIMARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-lg bg-vlec-blue-900 px-4 py-2 font-medium text-white text-column-label transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
+  "inline-flex items-center gap-2 rounded-full bg-vlec-blue-900 px-6 py-2.5 font-medium text-white text-control transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
 
 const SECONDARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-lg px-4 py-2 font-medium text-linguaskill-slate-500 text-column-label transition-colors hover:bg-linguaskill-slate-100 hover:text-linguaskill-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-500";
+  "inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-medium text-linguaskill-slate-500 text-control transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-500";
 
 const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 
@@ -65,6 +73,8 @@ export function describeSession(
       id: session.id,
       number,
       examLabel: "Not configured",
+      examName: "Not configured",
+      digital: session.mode === "digital",
       partName: NOT_APPLICABLE,
       allowedTime: NOT_APPLICABLE,
       extraMinutes: session.extraMinutes,
@@ -83,6 +93,8 @@ export function describeSession(
     id: session.id,
     number,
     examLabel: composeExamLabel(exam, session.mode, density),
+    examName: examDisplayName(exam, density),
+    digital: marksDigitalMode(exam, session.mode),
     partName: partLabel(part.name, density),
     allowedTime: formatAllowedTime(part.minutes + session.extraMinutes, part.qualifier),
     extraMinutes: session.extraMinutes,
@@ -131,22 +143,22 @@ export function SessionControls({
   return (
     <div className={CONTROLS_CLASSES}>
       <button className={SECONDARY_BUTTON_CLASSES} type="button" onClick={handleReset}>
-        <RotateCcw className={ICON_CLASSES} aria-hidden="true" />
+        <RotateCcw className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
         Reset
       </button>
       {runControlLabel !== null && (
         <button className={PRIMARY_BUTTON_CLASSES} type="button" onClick={handleRunControl}>
           {view.status === "running" ? (
-            <Pause className={ICON_CLASSES} aria-hidden="true" />
+            <Pause className={ICON_CLASSES} fill="currentColor" strokeWidth={1.5} aria-hidden="true" />
           ) : (
-            <Play className={ICON_CLASSES} aria-hidden="true" />
+            <Play className={ICON_CLASSES} fill="currentColor" strokeWidth={1.5} aria-hidden="true" />
           )}
           {runControlLabel}
         </button>
       )}
       {view.status === "finished" && view.nextPartName !== null && (
         <button className={PRIMARY_BUTTON_CLASSES} type="button" onClick={handleAdvance}>
-          <ChevronRight className={ICON_CLASSES} aria-hidden="true" />
+          <ChevronRight className={ICON_CLASSES} strokeWidth={2.5} aria-hidden="true" />
           Next: {view.nextPartName}
         </button>
       )}

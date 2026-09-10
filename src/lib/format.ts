@@ -138,13 +138,18 @@ export const partLabel = (partName: string, density: Density): string => {
   return shortPartNames[partName] ?? partName;
 };
 
+export const examDisplayName = (exam: Exam, density: Density): string =>
+  density === "compact" ? exam.shortName : exam.examName;
+
+export const marksDigitalMode = (exam: Exam, mode: Mode): boolean =>
+  mode === "digital" && exam.modes.includes("paper");
+
 export const composeExamLabel = (exam: Exam, mode: Mode, density: Density): string => {
-  const name = density === "compact" ? exam.shortName : exam.examName;
-  const suffixCarriesInformation = mode === "digital" && exam.modes.includes("paper");
-  if (!suffixCarriesInformation) {
+  const name = examDisplayName(exam, density);
+  if (!marksDigitalMode(exam, mode)) {
     return name;
   }
-  return `${name} ${density === "compact" ? "Dg" : "Digital"}`;
+  return `${name} Digital`;
 };
 
 export const densityFor = (sessionCount: number): Density =>

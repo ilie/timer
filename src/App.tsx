@@ -10,7 +10,7 @@ import { useClockJump } from "./hooks/useClockJump";
 const APP_CLASSES =
   "flex h-screen flex-col overflow-hidden bg-white text-linguaskill-slate-900";
 
-const MAIN_CLASSES = "flex min-h-0 flex-1 flex-col px-3 pb-2 pt-1";
+const MAIN_CLASSES = "flex min-h-0 flex-1 flex-col px-6 pb-1 pt-2";
 
 function App() {
   const [sessionDialogTarget, setSessionDialogTarget] = useState<SessionDialogTarget | null>(null);

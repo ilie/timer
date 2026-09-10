@@ -484,5 +484,7 @@ test("persists an edited centre number and leaves it alone when cancelled", asyn
   hydrateFromStorage();
 
   expect(getSnapshot().centreNumber).toBe("ES777");
-  expect(screen.getByText("Centre no: ES777")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Edit centre number" })).toHaveTextContent(
+    "Centre no: ES777",
+  );
 });

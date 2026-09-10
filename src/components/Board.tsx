@@ -1,11 +1,13 @@
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement, ReactNode } from "react";
-import { Pencil, Plus, X } from "lucide-react";
+import { Monitor, Pencil, Plus, X } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { COLUMN_LABEL_CLASSES, RemainingTime } from "./RemainingTime";
+import { COLUMN_LABEL_CLASSES, FIT_CLASSES, RemainingTime } from "./RemainingTime";
 import { SessionControls, describeSession } from "./SessionColumn";
 import type { SessionView } from "./SessionColumn";
 import { MAX_SESSIONS } from "../config/board";
+import { rowHeights, useBoardScale } from "../hooks/useBoardScale";
+import type { BoardScaleLayout } from "../hooks/useBoardScale";
 import { useUnloadGuard } from "../hooks/useUnloadGuard";
 import { densityFor, formatRemaining } from "../lib/format";
 import { remainingMs } from "../lib/timer";
@@ -17,15 +19,19 @@ type BoardProps = {
   onEditCentreNumber: () => void;
 };
 
-type ConfigureSessionButtonProps = {
-  id: string;
-  examLabel: string;
+type SessionTabProps = {
+  view: SessionView;
   onEditSession: (sessionId: string) => void;
+  onRequestRemove: (view: SessionView) => void;
 };
 
-type RemoveSessionButtonProps = {
-  view: SessionView;
-  onRequestRemove: (view: SessionView) => void;
+type ValueCellProps = {
+  label: string | null;
+  children: ReactNode;
+};
+
+type DigitalMarkProps = {
+  shown: boolean;
 };
 
 type PendingAction = {
@@ -36,85 +42,90 @@ type PendingAction = {
   remaining: string;
 };
 
-type BoardRowSpec = {
+type BoardRow = {
   label: string;
-  labelledPerColumn: boolean;
+  countdown: boolean;
   cellClassesFor: (column: SessionView) => string;
   rowSpanFor?: (column: SessionView) => number | undefined;
   omitsCell?: (column: SessionView) => boolean;
   render: (column: SessionView) => ReactNode;
 };
 
-const BOARD_CLASSES =
-  "group/board @container/board flex h-full min-h-0 w-full flex-col gap-1";
+const LABEL_LANE_FRACTION = 0.3;
+
+const BOARD_CLASSES = "group/board @container/board flex h-full min-h-0 w-full flex-col";
 
 const CENTRE_NUMBER_CLASSES =
-  "mr-auto inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left font-medium uppercase tracking-[0.14em] text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-100 hover:text-linguaskill-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-column-label";
+  "mb-2 mr-auto inline-flex shrink-0 cursor-pointer items-baseline gap-2 rounded-md px-2 py-1 text-left uppercase tracking-[0.16em] text-linguaskill-slate-500 transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 text-centre-number";
 
-const CENTRE_NUMBER_ICON_CLASSES = "h-[0.7em] w-[0.7em] shrink-0";
+const CENTRE_NUMBER_VALUE_CLASSES = "font-semibold text-vlec-blue-900";
+
+const CENTRE_NUMBER_ICON_CLASSES = "h-[0.75em] w-[0.75em] shrink-0 self-center";
+
+const REGION_CLASSES = "min-h-0 flex-1 overflow-hidden";
 
 const GRID_CLASSES = "h-full w-full table-fixed border-collapse";
 
-const GRID_FRAME_CLASSES = "min-h-0 flex-1";
-
-const LABEL_COLUMN_CLASSES = "w-[13%] @max-[60rem]/board:w-[22%]";
+const LABEL_COLUMN_CLASSES = "w-[30%]";
 
 const COLLAPSED_LABEL_COLUMN_CLASSES = "w-0";
 
-const ADD_COLUMN_CLASSES = "w-16 @max-[60rem]/board:w-12";
+const TAB_STRIP_CLASSES = "bg-linguaskill-slate-50";
 
-const SESSION_COLUMN_CLASSES = "border-r border-dashed border-linguaskill-slate-200";
+const TAB_STRIP_CELL_CLASSES = "pl-[var(--tab-flare)] pr-0 pt-2 align-bottom";
 
-const LAST_SESSION_COLUMN_CLASSES = "border-0";
+const TAB_STRIP_EDGE_CLASSES = "p-0";
 
-const TAB_CELL_CLASSES = "border-b border-linguaskill-slate-200 px-1 pt-2 align-bottom";
-
-const STRIP_EDGE_CLASSES = "border-b border-linguaskill-slate-200 p-0";
-
-const ADD_CELL_CLASSES = "border-b border-linguaskill-slate-200 px-1 pt-2 align-bottom";
+const TAB_ROW_CLASSES = "flex items-end";
 
 const TAB_CLASSES =
-  "group/tab -mb-px flex w-full items-center justify-between gap-1 rounded-t-lg border border-b-0 border-linguaskill-slate-200 bg-linguaskill-slate-50 px-3 py-2 text-left text-column-label";
+  "browser-tab group/tab flex min-w-0 items-center gap-1 pb-1.5 pl-4 pr-2 pt-1.5 text-tab";
 
 const TAB_LABEL_CLASSES =
-  "min-w-0 flex-1 truncate rounded text-left font-medium text-linguaskill-slate-600 transition-colors hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
+  "inline-flex min-w-0 items-baseline rounded font-medium text-linguaskill-slate-700 transition-colors hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
 
 const TAB_CLOSE_CLASSES =
-  "inline-flex shrink-0 items-center justify-center rounded p-1 text-linguaskill-slate-300 transition-colors group-hover/tab:text-linguaskill-slate-500 hover:bg-linguaskill-slate-200 hover:text-linguaskill-slate-900 focus-visible:text-linguaskill-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
+  "inline-flex shrink-0 items-center justify-center rounded-full p-1 text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
 
 const ADD_BUTTON_CLASSES =
-  "-mb-px inline-flex w-full items-center justify-center rounded-t-lg border border-b-0 border-transparent px-3 py-2 text-column-label text-linguaskill-slate-400 transition-colors hover:border-linguaskill-slate-200 hover:bg-linguaskill-slate-50 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-transparent disabled:text-linguaskill-slate-200";
+  "mb-1 ml-auto mr-2 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-tab text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-linguaskill-slate-300";
 
-const ROW_LABEL_CLASSES =
-  "px-5 py-2 text-right align-middle font-medium uppercase tracking-[0.14em] text-linguaskill-slate-400 text-column-label";
+const ROW_LABEL_CLASSES = "overflow-hidden text-right align-middle";
+
+const ROW_LABEL_TEXT_CLASSES = `${FIT_CLASSES} pr-[0.35em] font-semibold text-linguaskill-slate-500 after:content-[':']`;
 
 const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
 
-const ROW_CLASSES = "align-middle";
+const VALUE_CELL_CLASSES = "overflow-hidden align-middle";
 
-const COUNTDOWN_ROW_CLASSES = "h-[45%] align-middle";
+const CENTRED_VALUE_CLASSES = "text-center";
 
-const VALUE_CELL_CLASSES =
-  "px-3 py-2 text-center align-middle text-balance text-linguaskill-slate-900 text-exam group-data-[density=compact]/board:text-exam-compact";
+const ALIGNED_VALUE_CLASSES = "text-left";
 
-const REMAINING_CELL_CLASSES = "relative";
+const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-300";
 
-const CONTROLS_CELL_CLASSES = "px-3 py-2 text-center align-middle";
-
-const SPACER_CELL_CLASSES = "";
+const CONTROLS_CELL_CLASSES = "px-3 align-middle";
 
 const EXTRA_TIME_CLASSES =
-  "ml-2 rounded-md bg-linguaskill-slate-100 px-2 py-0.5 font-medium text-linguaskill-slate-600";
+  "ml-[0.35em] align-middle text-[0.5em] font-medium tracking-wide text-linguaskill-slate-500";
 
-const NO_COUNTDOWN_CELL_CLASSES = "";
+const EMPTY_CELL_CLASSES = "";
 
 const EMPTY_BOARD_CLASSES =
-  "flex h-full flex-col items-center justify-center gap-6 text-center text-linguaskill-slate-400 text-exam";
+  "flex h-full flex-col items-center justify-center gap-8 text-center text-linguaskill-slate-400";
+
+const EMPTY_BOARD_TEXT_CLASSES = "text-pretty text-centre-number tracking-[0.16em] uppercase";
 
 const EMPTY_BOARD_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-lg bg-vlec-blue-900 px-5 py-2.5 text-base font-medium text-white transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
+  "inline-flex items-center gap-3 rounded-full bg-vlec-blue-900 px-8 py-4 text-tab font-medium text-white transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
 
-const TAB_ICON_CLASSES = "h-[1.15em] w-[1.15em]";
+const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
+
+const DIGITAL_MARK_CLASSES =
+  "relative ml-[0.3em] inline-block h-[0.72em] w-[0.72em] overflow-hidden rounded-full bg-vlec-red-700 align-baseline text-white";
+
+const DIGITAL_MARK_ICON_CLASSES =
+  "absolute left-1/2 top-1/2 h-[0.42em] w-[0.42em] -translate-x-1/2 -translate-y-1/2";
 
 let clockSample = { revision: -1, now: 0 };
 
@@ -126,41 +137,55 @@ function getBoardClock(): number {
   return clockSample.now;
 }
 
-function ConfigureSessionButton({
-  id,
-  examLabel,
-  onEditSession,
-}: ConfigureSessionButtonProps): ReactElement {
+function SessionTab({ view, onEditSession, onRequestRemove }: SessionTabProps): ReactElement {
   function handleConfigure() {
-    onEditSession(id);
+    onEditSession(view.id);
   }
 
-  return (
-    <button
-      className={TAB_LABEL_CLASSES}
-      type="button"
-      aria-label={`Configure ${examLabel}`}
-      onClick={handleConfigure}
-    >
-      {examLabel}
-    </button>
-  );
-}
-
-function RemoveSessionButton({ view, onRequestRemove }: RemoveSessionButtonProps): ReactElement {
   function handleRemove() {
     onRequestRemove(view);
   }
 
   return (
-    <button
-      className={TAB_CLOSE_CLASSES}
-      type="button"
-      aria-label={`Remove ${view.examLabel}`}
-      onClick={handleRemove}
-    >
-      <X className={TAB_ICON_CLASSES} aria-hidden="true" />
-    </button>
+    <span className={TAB_CLASSES}>
+      <button
+        className={TAB_LABEL_CLASSES}
+        type="button"
+        aria-label={`Configure ${view.examLabel}`}
+        onClick={handleConfigure}
+      >
+        {view.examName}
+        <DigitalMark shown={view.digital} />
+      </button>
+      <button
+        className={TAB_CLOSE_CLASSES}
+        type="button"
+        aria-label={`Remove ${view.examLabel}`}
+        onClick={handleRemove}
+      >
+        <X className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+      </button>
+    </span>
+  );
+}
+
+function DigitalMark({ shown }: DigitalMarkProps): ReactElement | null {
+  if (!shown) {
+    return null;
+  }
+  return (
+    <span className={DIGITAL_MARK_CLASSES} role="img" aria-label="Digital">
+      <Monitor className={DIGITAL_MARK_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+    </span>
+  );
+}
+
+function ValueCell({ label, children }: ValueCellProps): ReactElement {
+  return (
+    <span data-fit="value" className={FIT_CLASSES}>
+      {label === null ? null : <span className={COLUMN_LABEL_CLASSES}>{label}</span>}
+      <span className="block">{children}</span>
+    </span>
   );
 }
 
@@ -189,10 +214,22 @@ export function Board({
   const columns = board.sessions.map((session, index) =>
     describeSession(session, index + 1, density, now),
   );
-  const labelColumnVisible = columns.length === 1;
+  const labelLaneVisible = columns.length === 1;
   const anyColumnCountsDown = columns.some((column) => column.countsDown);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const boardRef = useRef<HTMLElement>(null);
+  const regionRef = useRef<HTMLDivElement>(null);
+  const tabStripRef = useRef<HTMLTableSectionElement>(null);
 
+  const layout: BoardScaleLayout = {
+    columns: Math.max(1, columns.length),
+    valueRows: anyColumnCountsDown ? 4 : 3,
+    hasControlsRow: anyColumnCountsDown,
+    labelLaneFraction: labelLaneVisible ? LABEL_LANE_FRACTION : 0,
+  };
+  const heights = rowHeights(layout);
+
+  useBoardScale(boardRef, regionRef, tabStripRef, layout);
   useUnloadGuard(columns.some((column) => column.status === "running"));
 
   function handleThresholdCross() {}
@@ -228,46 +265,54 @@ export function Board({
     setPendingAction(null);
   }
 
-  const supportingRows: BoardRowSpec[] = [
+  const valueClasses = labelLaneVisible ? ALIGNED_VALUE_CLASSES : CENTRED_VALUE_CLASSES;
+  const perColumnLabel = (label: string): string | null => (labelLaneVisible ? null : label);
+
+  const supportingRows: BoardRow[] = [
     {
       label: "Exam",
-      cellClassesFor: () => VALUE_CELL_CLASSES,
-      labelledPerColumn: true,
-      render: (column) => column.examLabel,
+      countdown: false,
+      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
+      render: (column) => (
+        <ValueCell label={perColumnLabel("Exam")}>
+          {column.examName}
+          <DigitalMark shown={column.digital} />
+        </ValueCell>
+      ),
     },
     {
       label: "Part",
-      cellClassesFor: () => VALUE_CELL_CLASSES,
-      labelledPerColumn: true,
-      render: (column) => column.partName,
+      countdown: false,
+      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
+      render: (column) => <ValueCell label={perColumnLabel("Part")}>{column.partName}</ValueCell>,
     },
     {
       label: "Time",
-      cellClassesFor: () => VALUE_CELL_CLASSES,
-      labelledPerColumn: true,
-      render: (column) =>
-        column.extraMinutes > 0 ? (
-          <span>
-            {column.allowedTime}
+      countdown: false,
+      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
+      render: (column) => (
+        <ValueCell label={perColumnLabel("Time")}>
+          {column.allowedTime}
+          {column.extraMinutes > 0 && (
             <span className={EXTRA_TIME_CLASSES}>+{column.extraMinutes}min</span>
-          </span>
-        ) : (
-          column.allowedTime
-        ),
+          )}
+        </ValueCell>
+      ),
     },
   ];
 
-  const countdownRows: BoardRowSpec[] = [
+  const countdownRows: BoardRow[] = [
     {
       label: "Remaining",
+      countdown: true,
       cellClassesFor: (column) =>
-        column.countsDown ? REMAINING_CELL_CLASSES : NO_COUNTDOWN_CELL_CLASSES,
+        column.countsDown ? `${VALUE_CELL_CLASSES} ${valueClasses}` : EMPTY_CELL_CLASSES,
       rowSpanFor: (column) => (column.countsDown ? undefined : 2),
-      labelledPerColumn: false,
       render: (column) =>
         column.countsDown ? (
           <RemainingTime
-            label={labelColumnVisible ? null : "Remaining"}
+            label={perColumnLabel("Remaining")}
+            align={labelLaneVisible ? "start" : "center"}
             timer={column.timer}
             durationMs={column.durationMs}
             onThresholdCross={handleThresholdCross}
@@ -276,9 +321,9 @@ export function Board({
     },
     {
       label: "Controls",
-      cellClassesFor: () => CONTROLS_CELL_CLASSES,
+      countdown: false,
+      cellClassesFor: () => `${CONTROLS_CELL_CLASSES} ${valueClasses}`,
       omitsCell: (column) => !column.countsDown,
-      labelledPerColumn: false,
       render: (column) => <SessionControls view={column} onRequestReset={handleResetRequest} />,
     },
   ];
@@ -286,107 +331,111 @@ export function Board({
   const rows = anyColumnCountsDown ? [...supportingRows, ...countdownRows] : supportingRows;
 
   return (
-    <section className={BOARD_CLASSES} data-density={density} data-columns={columns.length}>
+    <section
+      ref={boardRef}
+      className={BOARD_CLASSES}
+      data-density={density}
+      data-columns={columns.length}
+    >
       <button
         className={CENTRE_NUMBER_CLASSES}
         type="button"
         aria-label="Edit centre number"
         onClick={onEditCentreNumber}
       >
-        <Pencil className={CENTRE_NUMBER_ICON_CLASSES} aria-hidden="true" />
-        Centre no: {board.centreNumber}
+        <Pencil className={CENTRE_NUMBER_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+        Centre no:{" "}
+        <span className={CENTRE_NUMBER_VALUE_CLASSES}>{board.centreNumber}</span>
       </button>
       {columns.length === 0 ? (
         <div className={EMPTY_BOARD_CLASSES}>
-          <p className="text-pretty">No sessions yet.</p>
+          <p className={EMPTY_BOARD_TEXT_CLASSES}>No sessions yet</p>
           <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
-            <Plus className="h-[1.15em] w-[1.15em]" aria-hidden="true" />
+            <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
             Add Session
           </button>
         </div>
       ) : (
-        <div className={GRID_FRAME_CLASSES}>
+        <div ref={regionRef} className={REGION_CLASSES}>
           <table className={GRID_CLASSES}>
             <caption className="sr-only">Exam sessions</caption>
             <colgroup>
               <col
-                className={
-                  labelColumnVisible ? LABEL_COLUMN_CLASSES : COLLAPSED_LABEL_COLUMN_CLASSES
-                }
+                className={labelLaneVisible ? LABEL_COLUMN_CLASSES : COLLAPSED_LABEL_COLUMN_CLASSES}
               />
-              {columns.map((column, index) => (
-                <col
-                  key={column.id}
-                  className={
-                    index === columns.length - 1
-                      ? LAST_SESSION_COLUMN_CLASSES
-                      : SESSION_COLUMN_CLASSES
-                  }
-                />
+              {columns.map((column) => (
+                <col key={column.id} />
               ))}
-              <col className={ADD_COLUMN_CLASSES} />
             </colgroup>
-            <thead>
+            <thead ref={tabStripRef} className={TAB_STRIP_CLASSES}>
               <tr>
-                <td className={STRIP_EDGE_CLASSES}></td>
-                {columns.map((column) => (
-                  <th key={column.id} className={TAB_CELL_CLASSES} scope="col">
-                    <span className={TAB_CLASSES}>
-                      <ConfigureSessionButton
-                        id={column.id}
-                        examLabel={column.examLabel}
+                {labelLaneVisible ? null : <td className={TAB_STRIP_EDGE_CLASSES}></td>}
+                {columns.map((column, index) => (
+                  <th
+                    key={column.id}
+                    className={TAB_STRIP_CELL_CLASSES}
+                    scope="col"
+                    colSpan={labelLaneVisible ? 2 : undefined}
+                    aria-label={column.examLabel}
+                  >
+                    <span className={TAB_ROW_CLASSES}>
+                      <SessionTab
+                        view={column}
                         onEditSession={onEditSession}
+                        onRequestRemove={handleRemoveRequest}
                       />
-                      <RemoveSessionButton view={column} onRequestRemove={handleRemoveRequest} />
+                      {index === columns.length - 1 && (
+                        <button
+                          className={ADD_BUTTON_CLASSES}
+                          type="button"
+                          aria-label="Add Session"
+                          onClick={onAddSession}
+                          disabled={columns.length >= MAX_SESSIONS}
+                        >
+                          <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+                        </button>
+                      )}
                     </span>
                   </th>
                 ))}
-                <td className={ADD_CELL_CLASSES}>
-                  <button
-                    className={ADD_BUTTON_CLASSES}
-                    type="button"
-                    aria-label="Add Session"
-                    onClick={onAddSession}
-                    disabled={columns.length >= MAX_SESSIONS}
-                  >
-                    <Plus className={TAB_ICON_CLASSES} aria-hidden="true" />
-                  </button>
-                </td>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr
                   key={row.label}
-                  className={
-                    row.label === "Remaining" && anyColumnCountsDown
-                      ? COUNTDOWN_ROW_CLASSES
-                      : ROW_CLASSES
-                  }
+                  style={{ height: row.label === "Controls" ? heights.controls : heights.value }}
                 >
                   <th
-                    className={labelColumnVisible ? ROW_LABEL_CLASSES : COLLAPSED_ROW_LABEL_CLASSES}
+                    className={labelLaneVisible ? ROW_LABEL_CLASSES : COLLAPSED_ROW_LABEL_CLASSES}
                     scope="row"
                   >
-                    {labelColumnVisible ? row.label : <span className="sr-only">{row.label}</span>}
+                    {labelLaneVisible && row.label !== "Controls" ? (
+                      <span data-fit="label" className={ROW_LABEL_TEXT_CLASSES}>
+                        {row.label}
+                      </span>
+                    ) : (
+                      <span className="sr-only">{row.label}</span>
+                    )}
                   </th>
-                  {columns.map((column) => {
+                  {columns.map((column, index) => {
                     if (row.omitsCell !== undefined && row.omitsCell(column)) {
                       return null;
                     }
-                    const rowSpan = row.rowSpanFor === undefined ? undefined : row.rowSpanFor(column);
+                    const rowSpan =
+                      row.rowSpanFor === undefined ? undefined : row.rowSpanFor(column);
+                    const separator =
+                      index === columns.length - 1 ? "" : ` ${SEPARATOR_CLASSES}`;
                     return (
-                      <td key={column.id} className={row.cellClassesFor(column)} rowSpan={rowSpan}>
-                        {!labelColumnVisible && row.labelledPerColumn && rowSpan === undefined ? (
-                          <span aria-hidden="true" className={COLUMN_LABEL_CLASSES}>
-                            {row.label}
-                          </span>
-                        ) : null}
+                      <td
+                        key={column.id}
+                        className={`${row.cellClassesFor(column)}${separator}`}
+                        rowSpan={rowSpan}
+                      >
                         {row.render(column)}
                       </td>
                     );
                   })}
-                  <td className={SPACER_CELL_CLASSES}></td>
                 </tr>
               ))}
             </tbody>

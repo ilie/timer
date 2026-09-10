@@ -78,12 +78,39 @@
   --color-linguaskill-slate-800: oklch(0.3 0.008 260);
   --color-linguaskill-slate-900: oklch(0.23 0.006 260);
   --color-linguaskill-slate-950: oklch(0.15 0.004 260);
-  --text-column-label: clamp(0.6875rem, 0.9vw, 1.125rem);
-  --text-column-label-compact: clamp(0.75rem, 1.1vw, 1.375rem);
-  --text-label-compact: clamp(0.875rem, 1.6vw, 2rem);
-  --text-label: clamp(0.875rem, 1.5vw, 1.875rem);
-  --text-exam-compact: clamp(1rem, 2.4vw, 3rem);
-  --text-exam: clamp(1.125rem, 2.1vw, 2.625rem);
-  --text-tab-compact: clamp(0.875rem, 1.5vw, 1.875rem);
-  --text-tab: clamp(0.875rem, 1.6vw, 2rem);
+  --text-tab: clamp(0.875rem, 1.15vw, 1.5rem);
+  --text-centre-number: clamp(0.9375rem, 1.35vw, 1.75rem);
+  --text-control: clamp(0.875rem, 1.05vw, 1.375rem);
+  --tab-flare: 0.875rem;
+}
+
+@utility browser-tab {
+  position: relative;
+  border-top-left-radius: var(--tab-flare);
+  border-top-right-radius: var(--tab-flare);
+  background-color: var(--color-white);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: var(--tab-flare);
+    height: var(--tab-flare);
+    background-color: var(--color-white);
+  }
+
+  &::before {
+    left: calc(-1 * var(--tab-flare));
+    mask-image: radial-gradient(
+      circle var(--tab-flare) at 100% 0,
+      transparent 0 100%,
+      black 100%
+    );
+  }
+
+  &::after {
+    right: calc(-1 * var(--tab-flare));
+    mask-image: radial-gradient(circle var(--tab-flare) at 0 0, transparent 0 100%, black 100%);
+  }
 }

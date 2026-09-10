@@ -192,8 +192,8 @@ describe("board grid", () => {
     render(<Board onAddSession={requestAddSession} onEditSession={requestEditSession} onEditCentreNumber={requestEditCentreNumber} />);
 
     expect(screen.queryByText("—")).not.toBeInTheDocument();
-    expect(within(rowOf("Remaining")).getAllByRole("cell")).toHaveLength(4);
-    expect(within(rowOf("Controls")).getAllByRole("cell")).toHaveLength(2);
+    expect(within(rowOf("Remaining")).getAllByRole("cell")).toHaveLength(3);
+    expect(within(rowOf("Controls")).getAllByRole("cell")).toHaveLength(1);
 
     const merged = within(rowOf("Remaining"))
       .getAllByRole("cell")
@@ -344,7 +344,8 @@ describe("component advance", () => {
 
     expect(document.querySelectorAll("[data-density]")).toHaveLength(1);
     expect(within(rowOf("Exam")).getByText("B1 Preliminary")).toBeInTheDocument();
-    expect(within(rowOf("Exam")).getByText("B2 First Digital")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("B2 First")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getAllByRole("img", { name: "Digital" })).toHaveLength(1);
     unmount();
 
     seed([
@@ -357,8 +358,9 @@ describe("component advance", () => {
 
     expect(document.querySelectorAll("[data-density]")).toHaveLength(1);
     expect(within(rowOf("Exam")).getByText("PET")).toBeInTheDocument();
-    expect(within(rowOf("Exam")).getByText("FCE Dg")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("FCE")).toBeInTheDocument();
     expect(within(rowOf("Exam")).getByText("Lsk Gen")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getAllByRole("img", { name: "Digital" })).toHaveLength(1);
     expect(within(rowOf("Part")).getByText("Reading & UoE")).toBeInTheDocument();
   });
 });

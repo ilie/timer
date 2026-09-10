@@ -4,6 +4,7 @@ import type { Exam } from "../config/exams";
 import {
   MAX_REMAINING_MS,
   composeExamLabel,
+  marksDigitalMode,
   densityFor,
   formatAllowedTime,
   formatRemaining,
@@ -113,8 +114,14 @@ describe("composeExamLabel", () => {
     expect(composeExamLabel(b2First, "digital", "full")).toBe("B2 First Digital");
   });
 
-  it("abbreviates both name and suffix at compact density", () => {
-    expect(composeExamLabel(b2First, "digital", "compact")).toBe("FCE Dg");
+  it("abbreviates the name but never the suffix the screen reader hears", () => {
+    expect(composeExamLabel(b2First, "digital", "compact")).toBe("FCE Digital");
+  });
+
+  it("marks the digital mode only where the exam also runs on paper", () => {
+    expect(marksDigitalMode(b2First, "digital")).toBe(true);
+    expect(marksDigitalMode(b2First, "paper")).toBe(false);
+    expect(marksDigitalMode(linguaskillGeneral, "digital")).toBe(false);
   });
 
   it("omits the suffix for a digital-only exam", () => {
