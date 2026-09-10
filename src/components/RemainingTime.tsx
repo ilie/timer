@@ -21,13 +21,13 @@ type SegmentRunProps = {
 };
 
 export const FIT_CLASSES =
-  "inline-block whitespace-nowrap px-[0.1em] align-middle leading-none text-[length:var(--board-value-size,1.75rem)]";
+  "inline-block whitespace-nowrap align-middle leading-none text-[length:var(--board-value-size,1.75rem)]";
 
 export const COLUMN_LABEL_CLASSES =
   "mb-[0.35em] block text-[0.28em] font-semibold uppercase leading-tight tracking-[0.2em] text-linguaskill-slate-400";
 
 const CLOCK_CLASSES =
-  "group/countdown inline-grid grid-cols-1 grid-rows-1 tabular-nums text-vlec-blue-900 data-[state=warning]:text-amber-700 data-[state=critical]:text-vlec-red-700 data-[state=zero]:text-vlec-red-900";
+  "group/countdown inline-grid grid-cols-1 grid-rows-1 tabular-nums text-vlec-blue-900 data-[state=warning]:text-amber-700 data-[state=critical]:text-vlec-red-700 data-[state=zero]:text-vlec-red-700";
 
 const ALIGNMENT_CLASSES: Record<ValueAlignment, string> = {
   start: "justify-items-start",

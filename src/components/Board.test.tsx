@@ -357,9 +357,9 @@ describe("component advance", () => {
     render(<Board onAddSession={requestAddSession} onEditSession={requestEditSession} onEditCentreNumber={requestEditCentreNumber} />);
 
     expect(document.querySelectorAll("[data-density]")).toHaveLength(1);
-    expect(within(rowOf("Exam")).getByText("PET")).toBeInTheDocument();
-    expect(within(rowOf("Exam")).getByText("FCE")).toBeInTheDocument();
-    expect(within(rowOf("Exam")).getByText("Lsk Gen")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("B1")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("B2")).toBeInTheDocument();
+    expect(within(rowOf("Exam")).getByText("Lsk")).toBeInTheDocument();
     expect(within(rowOf("Exam")).getAllByRole("img", { name: "Digital" })).toHaveLength(1);
     expect(within(rowOf("Part")).getByText("Reading & UoE")).toBeInTheDocument();
   });

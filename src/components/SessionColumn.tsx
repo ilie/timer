@@ -43,13 +43,13 @@ type SessionControlsProps = {
 
 const NOT_APPLICABLE = "—";
 
-const CONTROLS_CLASSES = "inline-flex flex-wrap items-center gap-3";
+const CONTROLS_CLASSES = "inline-flex flex-wrap items-center justify-center gap-3";
 
 const PRIMARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-full bg-vlec-blue-900 px-6 py-2.5 font-medium text-white text-control transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
+  "inline-flex min-w-[7.5em] items-center justify-center gap-2 rounded-full bg-vlec-blue-900 px-6 py-2.5 font-medium text-white text-control transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
 
 const SECONDARY_BUTTON_CLASSES =
-  "inline-flex items-center gap-2 rounded-full px-5 py-2.5 font-medium text-linguaskill-slate-500 text-control transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-500";
+  "inline-flex min-w-[6em] items-center justify-center gap-2 rounded-full px-5 py-2.5 font-medium text-linguaskill-slate-500 text-control transition-colors hover:bg-linguaskill-slate-100 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-linguaskill-slate-500";
 
 const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 

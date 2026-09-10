@@ -61,7 +61,7 @@ export const exams = [
   },
   {
     examName: "A2 Key",
-    shortName: "KET",
+    shortName: "A2",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -75,7 +75,7 @@ export const exams = [
   },
   {
     examName: "A2 Key for Schools",
-    shortName: "KET fS",
+    shortName: "A2 fS",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -89,7 +89,7 @@ export const exams = [
   },
   {
     examName: "B1 Preliminary",
-    shortName: "PET",
+    shortName: "B1",
     modes: ["paper", "digital"],
     examParts: [
       { id: "B1-01", name: "Reading", minutes: 45, qualifier: "exact" },
@@ -99,7 +99,7 @@ export const exams = [
   },
   {
     examName: "B1 Preliminary for Schools",
-    shortName: "PET fS",
+    shortName: "B1 fS",
     modes: ["paper", "digital"],
     examParts: [
       { id: "B1fS-01", name: "Reading", minutes: 45, qualifier: "exact" },
@@ -109,7 +109,7 @@ export const exams = [
   },
   {
     examName: "B2 First",
-    shortName: "FCE",
+    shortName: "B2",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -124,7 +124,7 @@ export const exams = [
   },
   {
     examName: "B2 First for Schools",
-    shortName: "FCE fS",
+    shortName: "B2 fS",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -139,7 +139,7 @@ export const exams = [
   },
   {
     examName: "C1 Advanced",
-    shortName: "CAE",
+    shortName: "C1",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -154,7 +154,7 @@ export const exams = [
   },
   {
     examName: "C2 Proficiency",
-    shortName: "CPE",
+    shortName: "C2",
     modes: ["paper", "digital"],
     examParts: [
       {
@@ -169,7 +169,7 @@ export const exams = [
   },
   {
     examName: "Linguaskill General",
-    shortName: "Lsk Gen",
+    shortName: "Lsk",
     modes: ["digital"],
     examParts: [
       { id: "LSK-01", name: "Reading", minutes: 45, qualifier: "max" },

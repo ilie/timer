@@ -79,7 +79,7 @@
   --color-linguaskill-slate-900: oklch(0.23 0.006 260);
   --color-linguaskill-slate-950: oklch(0.15 0.004 260);
   --text-tab: clamp(0.875rem, 1.15vw, 1.5rem);
-  --text-centre-number: clamp(0.9375rem, 1.35vw, 1.75rem);
+  --text-centre-number: clamp(1.125rem, 2.1vw, 2.75rem);
   --text-control: clamp(0.875rem, 1.05vw, 1.375rem);
   --tab-flare: 0.875rem;
 }

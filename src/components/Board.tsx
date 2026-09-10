@@ -30,8 +30,10 @@ type ValueCellProps = {
   children: ReactNode;
 };
 
-type DigitalMarkProps = {
-  shown: boolean;
+type ExamNameProps = {
+  name: string;
+  digital: boolean;
+  centred: boolean;
 };
 
 type PendingAction = {
@@ -48,6 +50,7 @@ type BoardRow = {
   cellClassesFor: (column: SessionView) => string;
   rowSpanFor?: (column: SessionView) => number | undefined;
   omitsCell?: (column: SessionView) => boolean;
+  fillsCell?: (column: SessionView) => boolean;
   render: (column: SessionView) => ReactNode;
 };
 
@@ -86,15 +89,15 @@ const TAB_CLOSE_CLASSES =
   "inline-flex shrink-0 items-center justify-center rounded-full p-1 text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
 
 const ADD_BUTTON_CLASSES =
-  "mb-1 ml-auto mr-2 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-tab text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-linguaskill-slate-300";
+  "mb-1 ml-auto mr-4 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-tab text-linguaskill-slate-500 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-linguaskill-slate-300";
 
-const ROW_LABEL_CLASSES = "overflow-hidden pl-6 text-right align-middle";
+const ROW_LABEL_CLASSES = "overflow-hidden pl-6 pr-2 text-right align-middle";
 
 const ROW_LABEL_TEXT_CLASSES = `${FIT_CLASSES} pr-[0.35em] font-semibold text-linguaskill-slate-500 after:content-[':']`;
 
 const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
 
-const VALUE_CELL_CLASSES = "overflow-hidden px-1 align-middle";
+const VALUE_CELL_CLASSES = "overflow-hidden px-6 align-middle";
 
 const CENTRED_VALUE_CLASSES = "text-center";
 
@@ -102,7 +105,7 @@ const ALIGNED_VALUE_CLASSES = "text-left";
 
 const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-200";
 
-const CONTROLS_CELL_CLASSES = "px-2 align-middle";
+const CONTROLS_CELL_CLASSES = "px-6 align-middle";
 
 const EXTRA_TIME_CLASSES =
   "ml-[0.35em] align-middle text-[0.5em] font-medium tracking-wide text-linguaskill-slate-500";
@@ -120,7 +123,11 @@ const EMPTY_BOARD_BUTTON_CLASSES =
 const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 
 const DIGITAL_MARK_CLASSES =
-  "relative ml-[0.3em] inline-block h-[0.72em] w-[0.72em] overflow-hidden rounded-full bg-vlec-red-700 align-baseline text-white";
+  "relative inline-block h-[0.72em] w-[0.72em] overflow-hidden rounded-full bg-vlec-red-700 align-baseline text-white";
+
+const DIGITAL_MARK_TRAILING_CLASSES = "ml-[0.3em]";
+
+const DIGITAL_MARK_BALANCE_CLASSES = "mr-[0.3em] invisible";
 
 const DIGITAL_MARK_ICON_CLASSES =
   "absolute left-1/2 top-1/2 h-[0.42em] w-[0.42em] -translate-x-1/2 -translate-y-1/2";
@@ -152,8 +159,7 @@ function SessionTab({ view, onEditSession, onRequestRemove }: SessionTabProps): 
         aria-label={`Configure ${view.examLabel}`}
         onClick={handleConfigure}
       >
-        {view.examName}
-        <DigitalMark shown={view.digital} />
+        <ExamName name={view.examName} digital={view.digital} centred={false} />
       </button>
       <button
         className={TAB_CLOSE_CLASSES}
@@ -167,14 +173,27 @@ function SessionTab({ view, onEditSession, onRequestRemove }: SessionTabProps): 
   );
 }
 
-function DigitalMark({ shown }: DigitalMarkProps): ReactElement | null {
-  if (!shown) {
-    return null;
+function ExamName({ name, digital, centred }: ExamNameProps): ReactElement {
+  if (!digital) {
+    return <>{name}</>;
   }
   return (
-    <span className={DIGITAL_MARK_CLASSES} role="img" aria-label="Digital">
-      <Monitor className={DIGITAL_MARK_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-    </span>
+    <>
+      {centred && (
+        <span
+          className={`${DIGITAL_MARK_CLASSES} ${DIGITAL_MARK_BALANCE_CLASSES}`}
+          aria-hidden="true"
+        />
+      )}
+      {name}
+      <span
+        className={`${DIGITAL_MARK_CLASSES} ${DIGITAL_MARK_TRAILING_CLASSES}`}
+        role="img"
+        aria-label="Digital"
+      >
+        <Monitor className={DIGITAL_MARK_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+      </span>
+    </>
   );
 }
 
@@ -185,6 +204,13 @@ function ValueCell({ label, children }: ValueCellProps): ReactElement {
       <span className="block">{children}</span>
     </span>
   );
+}
+
+function fillsCell(row: BoardRow, column: SessionView | undefined): boolean {
+  if (column === undefined) {
+    return false;
+  }
+  return row.fillsCell === undefined || row.fillsCell(column);
 }
 
 function pendingActionFor(kind: PendingAction["kind"], view: SessionView): PendingAction {
@@ -273,8 +299,11 @@ export function Board({
       cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
       render: (column) => (
         <ValueCell label={perColumnLabel("Exam")}>
-          {column.examName}
-          <DigitalMark shown={column.digital} />
+          <ExamName
+            name={column.examName}
+            digital={column.digital}
+            centred={!labelLaneVisible}
+          />
         </ValueCell>
       ),
     },
@@ -303,6 +332,7 @@ export function Board({
     {
       label: "Remaining",
       countdown: true,
+      fillsCell: (column) => column.countsDown,
       cellClassesFor: (column) =>
         column.countsDown ? `${VALUE_CELL_CLASSES} ${valueClasses}` : EMPTY_CELL_CLASSES,
       rowSpanFor: (column) => (column.countsDown ? undefined : 2),
@@ -422,12 +452,14 @@ export function Board({
                     }
                     const rowSpan =
                       row.rowSpanFor === undefined ? undefined : row.rowSpanFor(column);
+                    const rowReaches =
+                      fillsCell(row, column) || fillsCell(row, columns[index + 1]);
                     const separator =
-                      index === columns.length - 1 ? "" : ` ${SEPARATOR_CLASSES}`;
+                      index < columns.length - 1 && rowReaches ? SEPARATOR_CLASSES : "";
                     return (
                       <td
                         key={column.id}
-                        className={`${row.cellClassesFor(column)}${separator}`}
+                        className={`${row.cellClassesFor(column)} ${separator}`}
                         rowSpan={rowSpan}
                       >
                         {row.render(column)}

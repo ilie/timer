@@ -14,6 +14,7 @@ export type RowHeights = {
 };
 
 type FitItem = {
+  cell: HTMLElement;
   lane: string;
   width: number;
   height: number;
@@ -33,7 +34,7 @@ const MIN_VALUE_PX = 14;
 
 const MAX_VALUE_PX = 320;
 
-const WIDTH_SAFETY = 0.99;
+const WIDTH_SAFETY = 0.995;
 
 const HEIGHT_SAFETY = 0.96;
 
@@ -48,6 +49,15 @@ const totalRowWeight = (layout: BoardScaleLayout): number =>
 
 const widestIn = (items: readonly FitItem[], lane: string): number =>
   items.reduce((widest, item) => (item.lane === lane ? Math.max(widest, item.width) : widest), 0);
+
+const contentWidthOf = (cell: HTMLElement): number => {
+  const padding = window.getComputedStyle(cell);
+  return (
+    cell.clientWidth -
+    Number.parseFloat(padding.paddingLeft) -
+    Number.parseFloat(padding.paddingRight)
+  );
+};
 
 const labelLaneFractionFor = (items: readonly FitItem[]): number => {
   const labels = widestIn(items, LABEL_LANE);
@@ -91,9 +101,15 @@ export function useBoardScale(
     board.style.setProperty(VALUE_SIZE_PROPERTY, `${BASIS_PX}px`);
     const items: FitItem[] = [];
     for (const element of board.querySelectorAll<HTMLElement>(FIT_SELECTOR)) {
+      const cell = element.closest<HTMLElement>("td, th");
       const box = element.getBoundingClientRect();
-      if (box.width > 0 && box.height > 0) {
-        items.push({ lane: element.dataset.fit ?? "", width: box.width, height: box.height });
+      if (cell !== null && box.width > 0 && box.height > 0) {
+        items.push({
+          cell,
+          lane: element.dataset.fit ?? "",
+          width: box.width,
+          height: box.height,
+        });
       }
     }
 
@@ -101,16 +117,13 @@ export function useBoardScale(
     board.style.setProperty(LABEL_LANE_PROPERTY, `${(labelLaneFraction * 100).toFixed(3)}%`);
 
     const valueRowHeight = (rowsHeight / totalRowWeight(layout)) * HEIGHT_SAFETY;
-    const valueLaneWidth =
-      ((regionBox.width * (1 - labelLaneFraction)) / layout.columns) * WIDTH_SAFETY;
-    const labelLaneWidth = regionBox.width * labelLaneFraction * WIDTH_SAFETY;
 
     let smallest = MAX_VALUE_PX;
     for (const item of items) {
-      const laneWidth = item.lane === LABEL_LANE ? labelLaneWidth : valueLaneWidth;
+      const available = contentWidthOf(item.cell) * WIDTH_SAFETY;
       smallest = Math.min(
         smallest,
-        (laneWidth * BASIS_PX) / item.width,
+        (available * BASIS_PX) / item.width,
         (valueRowHeight * BASIS_PX) / item.height,
       );
     }

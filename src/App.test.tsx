@@ -258,7 +258,7 @@ test("leaves every configured session in place when the dialog is cancelled", as
   seedFourSessions();
   render(<App />);
 
-  await openTabDialog(user, "KET");
+  await openTabDialog(user, "A2");
   await chooseExam(user, "B2 First");
   await choosePart(user, "Reading & Use of English");
   await chooseMode(user, "Paper");
@@ -273,7 +273,7 @@ test("reconfigures one session on save and keeps the others", async () => {
   seedFourSessions();
   render(<App />);
 
-  await openTabDialog(user, "KET");
+  await openTabDialog(user, "A2");
   await chooseExam(user, "B2 First");
   await choosePart(user, "Reading & Use of English");
   await chooseMode(user, "Paper");

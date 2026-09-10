@@ -115,7 +115,7 @@ describe("composeExamLabel", () => {
   });
 
   it("abbreviates the name but never the suffix the screen reader hears", () => {
-    expect(composeExamLabel(b2First, "digital", "compact")).toBe("FCE Digital");
+    expect(composeExamLabel(b2First, "digital", "compact")).toBe("B2 Digital");
   });
 
   it("marks the digital mode only where the exam also runs on paper", () => {
@@ -125,7 +125,7 @@ describe("composeExamLabel", () => {
   });
 
   it("omits the suffix for a digital-only exam", () => {
-    expect(composeExamLabel(linguaskillGeneral, "digital", "compact")).toBe("Lsk Gen");
+    expect(composeExamLabel(linguaskillGeneral, "digital", "compact")).toBe("Lsk");
     expect(composeExamLabel(linguaskillGeneral, "digital", "full")).toBe("Linguaskill General");
   });
 });
