@@ -326,6 +326,10 @@ export const resetSession = (id: string): void => {
   updateSessionTimer(id, (session) => (session.timer.status === "idle" ? session.timer : reset()));
 };
 
+export const setOnlySession = (session: Session): void => {
+  commit({ ...snapshot, sessions: [session] });
+};
+
 export const setClockJumpDetected = (detected: boolean): void => {
   if (snapshot.clockJumpDetected === detected) {
     return;

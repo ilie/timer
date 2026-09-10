@@ -1,71 +1,94 @@
-import { useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Header from "./components/UI/Header";
-import Main from "./components/pages/Main";
 import Settings from "./components/pages/Settings";
 import Modal from "./components/UI/Modal";
 import Footer from "./components/UI/Footer";
+import { SessionColumn } from "./components/SessionColumn";
+import { useClockJump } from "./hooks/useClockJump";
+import { exams } from "./config/exams";
+import type { Mode } from "./config/exams";
+import { densityFor } from "./lib/format";
+import { reset } from "./lib/timer";
+import { getSnapshot, setOnlySession, subscribe } from "./store/boardStore";
+
+const BRIDGED_SESSION_ID = "bridged-session";
+
+function selectedMode(): Mode {
+  return sessionStorage.getItem("examType") === "CB" ? "digital" : "paper";
+}
 
 function App() {
+  const board = useSyncExternalStore(subscribe, getSnapshot);
   const [showModal, setShowModal] = useState(false);
-  const [examName, setExamName] = useState("...");
-  const [examPart, setExamPart] = useState("...");
-  const [examTime, setExamTime] = useState("...");
-  const [examTimeInMinutes, setExamTimeInMinutes] = useState(0);
-  const [showTimer, setShowTimer] = useState(false);
+  const chosenExamName = useRef("");
 
-  const hideModalHandler = () => {
+  useClockJump();
+
+  const session = board.sessions[0];
+  const density = densityFor(board.sessions.length);
+
+  function handleHideModal() {
     setShowModal(false);
-  };
-  const showModalHandler = () => {
-    setShowModal(true);
-  };
+  }
 
-  const examNameHandler = (value: string) => {
-    const examType = sessionStorage.getItem("examType");
-    setExamName(examType ? examType + " " + value : value);
-  };
-  const examPartHandler = (value: string) => {
-    setExamPart(value);
-  };
-  const examTimeHandler = (value: string) => {
-    setExamTime(value);
-  };
-  const examTimeInMinutesHandler = (value: number) => {
-    setExamTimeInMinutes(value);
-  };
-  const showTimerHandler = (value: boolean) => {
-    setShowTimer(value);
-  };
-  const toggleTimerHandler = () => {
-    setShowTimer((current) => !current);
-  };
+  function handleShowModal() {
+    setShowModal(true);
+  }
+
+  function handleExamName(value: string) {
+    chosenExamName.current = value;
+  }
+
+  function handleExamPart(value: string) {
+    const examName = chosenExamName.current;
+    const exam = exams.find((candidate) => candidate.examName === examName);
+    if (exam === undefined) {
+      return;
+    }
+    const partIndex = exam.examParts.findIndex((part) => part.name === value);
+    if (partIndex < 0) {
+      return;
+    }
+    setOnlySession({
+      id: BRIDGED_SESSION_ID,
+      examName,
+      partIndex,
+      mode: selectedMode(),
+      extraMinutes: 0,
+      timer: reset(),
+    });
+  }
+
+  function ignoreSupersededFormValue() {}
+
+  function handleThresholdCross() {}
 
   return (
     <div className="App">
-      <Modal showModal={showModal} click={hideModalHandler}>
+      <Modal showModal={showModal} click={handleHideModal}>
         <Settings
-          onExamName={examNameHandler}
-          onExamPart={examPartHandler}
-          onExamTime={examTimeHandler}
-          onExamTimeInMinutes={examTimeInMinutesHandler}
-          onShowTimer={showTimerHandler}
-          onHideModal={hideModalHandler}
+          onExamName={handleExamName}
+          onExamPart={handleExamPart}
+          onExamTime={ignoreSupersededFormValue}
+          onExamTimeInMinutes={ignoreSupersededFormValue}
+          onShowTimer={ignoreSupersededFormValue}
+          onHideModal={handleHideModal}
         />
       </Modal>
       <Header />
-      <Main
-        examName={examName}
-        examPart={examPart}
-        examTime={examTime}
-        examTimeInMinutes={examTimeInMinutes}
-        showTimer={showTimer}
-      />
-      <Footer
-        click={showModalHandler}
-        showTimer={showTimer}
-        toggleShowTimer={toggleTimerHandler}
-        examName={examName}
-      />
+      <main className="wrapper">
+        <p className="centre-number">Centre no: {board.centreNumber}</p>
+        {session === undefined ? (
+          <p className="session-column">No exam selected yet.</p>
+        ) : (
+          <SessionColumn
+            session={session}
+            density={density}
+            onThresholdCross={handleThresholdCross}
+          />
+        )}
+      </main>
+      <Footer click={handleShowModal} examName="" />
     </div>
   );
 }
