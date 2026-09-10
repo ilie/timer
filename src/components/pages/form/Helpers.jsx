@@ -1,10 +1,10 @@
-import { Exams } from "../../../store/Exams";
+import { exams } from "../../../config/exams";
 
 export const getExamParts = (name) => {
-  return Exams.find((exam) => exam.examName === name).examParts;
+  return exams.find((exam) => exam.examName === name).examParts;
 };
 
-export const examOptions = Exams.map((exam) => {
+export const examOptions = exams.map((exam) => {
   return (
     <option key={exam.examName} value={exam.examName}>
       {exam.examName}
