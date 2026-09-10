@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { ReactElement } from "react";
 import { TriangleAlert } from "lucide-react";
 import { ModalDialog } from "./ModalDialog";
@@ -23,6 +24,8 @@ export function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps): ReactElement {
+  const messageId = useId();
+
   function handleConfirm(): boolean {
     onConfirm();
     return true;
@@ -33,11 +36,14 @@ export function ConfirmDialog({
       title={title}
       titleIcon={TriangleAlert}
       submitLabel={confirmLabel}
+      describedBy={messageId}
       destructive
       onSubmit={handleConfirm}
       onClose={onClose}
     >
-      <p className={MESSAGE_CLASSES}>{message}</p>
+      <p id={messageId} className={MESSAGE_CLASSES}>
+        {message}
+      </p>
       <p className={DETAIL_CLASSES}>{detail}</p>
     </ModalDialog>
   );

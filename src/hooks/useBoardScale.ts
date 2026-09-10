@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect } from "react";
 import type { RefObject } from "react";
 
 export type BoardScaleLayout = {
@@ -13,6 +13,7 @@ export type RowHeights = {
   controls: string;
 };
 
+/** One measured piece of board text, with the cell it has to fit inside. */
 type FitItem = {
   cell: HTMLElement;
   lane: string;
@@ -44,22 +45,27 @@ const WIDEST_LABEL_LANE = 0.45;
 
 const CONTROLS_ROW_WEIGHT = 0.55;
 
-const totalRowWeight = (layout: BoardScaleLayout): number =>
-  layout.valueRows + (layout.hasControlsRow ? CONTROLS_ROW_WEIGHT : 0);
+function totalRowWeight(layout: BoardScaleLayout): number {
+  return layout.valueRows + (layout.hasControlsRow ? CONTROLS_ROW_WEIGHT : 0);
+}
 
-const widestIn = (items: readonly FitItem[], lane: string): number =>
-  items.reduce((widest, item) => (item.lane === lane ? Math.max(widest, item.width) : widest), 0);
+function widestIn(items: readonly FitItem[], lane: string): number {
+  return items.reduce(
+    (widest, item) => (item.lane === lane ? Math.max(widest, item.width) : widest),
+    0,
+  );
+}
 
-const contentWidthOf = (cell: HTMLElement): number => {
+function contentWidthOf(cell: HTMLElement): number {
   const padding = window.getComputedStyle(cell);
   return (
     cell.clientWidth -
     Number.parseFloat(padding.paddingLeft) -
     Number.parseFloat(padding.paddingRight)
   );
-};
+}
 
-const labelLaneFractionFor = (items: readonly FitItem[]): number => {
+function labelLaneFractionFor(items: readonly FitItem[]): number {
   const labels = widestIn(items, LABEL_LANE);
   const values = items.reduce(
     (widest, item) => (item.lane === LABEL_LANE ? widest : Math.max(widest, item.width)),
@@ -69,23 +75,39 @@ const labelLaneFractionFor = (items: readonly FitItem[]): number => {
     return NARROWEST_LABEL_LANE;
   }
   return Math.min(WIDEST_LABEL_LANE, Math.max(NARROWEST_LABEL_LANE, labels / (labels + values)));
-};
+}
 
-export const rowHeights = (layout: BoardScaleLayout): RowHeights => {
+function measure(board: HTMLElement): FitItem[] {
+  const items: FitItem[] = [];
+  for (const element of board.querySelectorAll<HTMLElement>(FIT_SELECTOR)) {
+    const cell = element.closest<HTMLElement>("td, th");
+    const box = element.getBoundingClientRect();
+    if (cell !== null && box.width > 0 && box.height > 0) {
+      items.push({ cell, lane: element.dataset.fit ?? "", width: box.width, height: box.height });
+    }
+  }
+  return items;
+}
+
+export function rowHeights(layout: BoardScaleLayout): RowHeights {
   const total = totalRowWeight(layout);
   return {
     value: `${(100 / total).toFixed(4)}%`,
     controls: `${((100 * CONTROLS_ROW_WEIGHT) / total).toFixed(4)}%`,
   };
-};
+}
 
+/**
+ * Sizes the board's text to the largest that still fits every cell, by measuring
+ * at a known basis size and scaling the result back down.
+ */
 export function useBoardScale(
   boardRef: RefObject<HTMLElement | null>,
   regionRef: RefObject<HTMLElement | null>,
   tabStripRef: RefObject<HTMLElement | null>,
   layout: BoardScaleLayout,
 ): void {
-  const fitToBoard = () => {
+  const fitToBoard = useEffectEvent((): void => {
     const board = boardRef.current;
     const region = regionRef.current;
     if (board === null || region === null) {
@@ -99,19 +121,7 @@ export function useBoardScale(
     }
 
     board.style.setProperty(VALUE_SIZE_PROPERTY, `${BASIS_PX}px`);
-    const items: FitItem[] = [];
-    for (const element of board.querySelectorAll<HTMLElement>(FIT_SELECTOR)) {
-      const cell = element.closest<HTMLElement>("td, th");
-      const box = element.getBoundingClientRect();
-      if (cell !== null && box.width > 0 && box.height > 0) {
-        items.push({
-          cell,
-          lane: element.dataset.fit ?? "",
-          width: box.width,
-          height: box.height,
-        });
-      }
-    }
+    const items = measure(board);
 
     const labelLaneFraction = layout.labelLane ? labelLaneFractionFor(items) : 0;
     board.style.setProperty(LABEL_LANE_PROPERTY, `${(labelLaneFraction * 100).toFixed(3)}%`);
@@ -129,12 +139,10 @@ export function useBoardScale(
     }
     const fitted = Math.max(MIN_VALUE_PX, Math.min(MAX_VALUE_PX, Math.floor(smallest)));
     board.style.setProperty(VALUE_SIZE_PROPERTY, `${fitted}px`);
-  };
+  });
 
-  const latestFit = useRef(fitToBoard);
-
+  // Re-fit after every render: any change to the board's contents can change what fits.
   useLayoutEffect(() => {
-    latestFit.current = fitToBoard;
     fitToBoard();
   });
 
@@ -144,7 +152,7 @@ export function useBoardScale(
       return;
     }
     const observer = new ResizeObserver(() => {
-      latestFit.current();
+      fitToBoard();
     });
     observer.observe(region);
     return () => {

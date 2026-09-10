@@ -2,6 +2,7 @@ import { useState } from "react";
 import Header from "./components/UI/Header";
 import Footer from "./components/UI/Footer";
 import { Board } from "./components/Board";
+import { ClockAlert } from "./components/ClockAlert";
 import { BoardSettingsDialog } from "./components/BoardSettingsDialog";
 import { SessionDialog } from "./components/SessionDialog";
 import type { SessionDialogTarget } from "./components/SessionDialog";
@@ -42,6 +43,7 @@ function App() {
     <div className={APP_CLASSES}>
       <Header />
       <main className={MAIN_CLASSES}>
+        <ClockAlert />
         <Board
           onAddSession={handleAddSession}
           onEditSession={handleEditSession}

@@ -1,17 +1,22 @@
 import { useRef, useState, useSyncExternalStore } from "react";
-import type { ReactElement, ReactNode } from "react";
-import { Monitor, Pencil, Plus, X } from "lucide-react";
+import type { ReactElement } from "react";
+import { Pencil, Plus } from "lucide-react";
+import { BoardGrid } from "./BoardGrid";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { COLUMN_LABEL_CLASSES, FIT_CLASSES, RemainingTime } from "./RemainingTime";
-import { SessionControls, describeSession } from "./SessionColumn";
-import type { SessionView } from "./SessionColumn";
-import { MAX_SESSIONS } from "../config/board";
 import { rowHeights, useBoardScale } from "../hooks/useBoardScale";
 import type { BoardScaleLayout } from "../hooks/useBoardScale";
 import { useUnloadGuard } from "../hooks/useUnloadGuard";
 import { densityFor, formatRemaining } from "../lib/format";
+import { describeSession } from "../lib/sessionView";
+import type { SessionView } from "../lib/sessionView";
 import { remainingMs } from "../lib/timer";
-import { getSnapshot, removeSession, resetSession, subscribe } from "../store/boardStore";
+import {
+  getClockSnapshot,
+  getSnapshot,
+  removeSession,
+  resetSession,
+  subscribe,
+} from "../store/boardStore";
 
 type BoardProps = {
   onAddSession: () => void;
@@ -19,39 +24,41 @@ type BoardProps = {
   onEditCentreNumber: () => void;
 };
 
-type SessionTabProps = {
-  view: SessionView;
-  onEditSession: (sessionId: string) => void;
-  onRequestRemove: (view: SessionView) => void;
+type EmptyBoardProps = {
+  onAddSession: () => void;
 };
 
-type ValueCellProps = {
-  label: string | null;
-  children: ReactNode;
-};
+type PendingActionKind = "remove" | "reset";
 
-type ExamNameProps = {
-  name: string;
-  digital: boolean;
-  centred: boolean;
-};
-
+/** A destructive request held back until the invigilator confirms it. */
 type PendingAction = {
-  kind: "remove" | "reset";
+  kind: PendingActionKind;
   sessionId: string;
   examLabel: string;
   partName: string;
   remaining: string;
 };
 
-type BoardRow = {
-  label: string;
-  countdown: boolean;
-  cellClassesFor: (column: SessionView) => string;
-  rowSpanFor?: (column: SessionView) => number | undefined;
-  omitsCell?: (column: SessionView) => boolean;
-  fillsCell?: (column: SessionView) => boolean;
-  render: (column: SessionView) => ReactNode;
+type PendingActionDialogProps = {
+  action: PendingAction;
+  onConfirm: () => void;
+  onClose: () => void;
+};
+
+const CONFIRMATIONS: Record<
+  PendingActionKind,
+  { title: string; message: string; confirmLabel: string }
+> = {
+  remove: {
+    title: "Close This Session?",
+    message: "Closing removes the column and its countdown from the board.",
+    confirmLabel: "Close Session",
+  },
+  reset: {
+    title: "Reset This Countdown?",
+    message: "Resetting returns the countdown to the full allowed time.",
+    confirmLabel: "Reset Countdown",
+  },
 };
 
 const BOARD_CLASSES = "flex h-full min-h-0 w-full flex-col";
@@ -63,55 +70,6 @@ const CENTRE_NUMBER_VALUE_CLASSES = "font-semibold text-vlec-blue-900";
 
 const CENTRE_NUMBER_ICON_CLASSES = "h-[0.75em] w-[0.75em] shrink-0 self-center";
 
-const REGION_CLASSES = "min-h-0 flex-1 overflow-hidden";
-
-const GRID_CLASSES = "h-full w-full table-fixed border-collapse";
-
-const LABEL_COLUMN_CLASSES = "w-[var(--board-label-lane,30%)]";
-
-const COLLAPSED_LABEL_COLUMN_CLASSES = "w-0";
-
-const TAB_STRIP_CLASSES = "bg-vlec-blue-50";
-
-const TAB_STRIP_CELL_CLASSES = "pl-[var(--tab-flare)] pr-0 pt-2 align-bottom";
-
-const TAB_STRIP_EDGE_CLASSES = "p-0";
-
-const TAB_ROW_CLASSES = "flex items-end";
-
-const TAB_CLASSES =
-  "browser-tab group/tab flex min-w-0 items-center gap-1 pb-1.5 pl-4 pr-2 pt-1.5 text-tab";
-
-const TAB_LABEL_CLASSES =
-  "inline-flex min-w-0 items-baseline rounded font-medium text-linguaskill-slate-700 transition-colors hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
-
-const TAB_CLOSE_CLASSES =
-  "inline-flex shrink-0 items-center justify-center rounded-full p-1 text-linguaskill-slate-400 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700";
-
-const ADD_BUTTON_CLASSES =
-  "mb-1 ml-auto mr-4 inline-flex shrink-0 items-center justify-center rounded-full p-1.5 text-tab text-linguaskill-slate-500 transition-colors hover:bg-linguaskill-slate-200 hover:text-vlec-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-linguaskill-slate-300";
-
-const ROW_LABEL_CLASSES = "overflow-hidden pl-6 pr-2 text-right align-middle";
-
-const ROW_LABEL_TEXT_CLASSES = `${FIT_CLASSES} pr-[0.35em] font-semibold text-linguaskill-slate-500 after:content-[':']`;
-
-const COLLAPSED_ROW_LABEL_CLASSES = "w-0 p-0";
-
-const VALUE_CELL_CLASSES = "overflow-hidden px-6 align-middle";
-
-const CENTRED_VALUE_CLASSES = "text-center";
-
-const ALIGNED_VALUE_CLASSES = "text-left";
-
-const SEPARATOR_CLASSES = "border-r border-dashed border-linguaskill-slate-200";
-
-const CONTROLS_CELL_CLASSES = "px-6 align-middle";
-
-const EXTRA_TIME_CLASSES =
-  "ml-[0.35em] align-middle text-[0.5em] font-medium tracking-wide text-linguaskill-slate-500";
-
-const EMPTY_CELL_CLASSES = "";
-
 const EMPTY_BOARD_CLASSES =
   "flex h-full flex-col items-center justify-center gap-8 text-center text-linguaskill-slate-400";
 
@@ -122,98 +80,12 @@ const EMPTY_BOARD_BUTTON_CLASSES =
 
 const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
 
-const DIGITAL_MARK_CLASSES =
-  "relative inline-block h-[0.72em] w-[0.72em] overflow-hidden rounded-full bg-vlec-red-700 align-baseline text-white";
+const SUPPORTING_ROWS = 3;
 
-const DIGITAL_MARK_TRAILING_CLASSES = "ml-[0.3em]";
+const COUNTDOWN_ROWS = 4;
 
-const DIGITAL_MARK_BALANCE_CLASSES = "mr-[0.3em] invisible";
-
-const DIGITAL_MARK_ICON_CLASSES =
-  "absolute left-1/2 top-1/2 h-[0.42em] w-[0.42em] -translate-x-1/2 -translate-y-1/2";
-
-let clockSample = { revision: -1, now: 0 };
-
-function getBoardClock(): number {
-  const { revision } = getSnapshot();
-  if (clockSample.revision !== revision) {
-    clockSample = { revision, now: Date.now() };
-  }
-  return clockSample.now;
-}
-
-function SessionTab({ view, onEditSession, onRequestRemove }: SessionTabProps): ReactElement {
-  function handleConfigure() {
-    onEditSession(view.id);
-  }
-
-  function handleRemove() {
-    onRequestRemove(view);
-  }
-
-  return (
-    <span className={TAB_CLASSES}>
-      <button
-        className={TAB_LABEL_CLASSES}
-        type="button"
-        aria-label={`Configure ${view.examLabel}`}
-        onClick={handleConfigure}
-      >
-        <ExamName name={view.examName} digital={view.digital} centred={false} />
-      </button>
-      <button
-        className={TAB_CLOSE_CLASSES}
-        type="button"
-        aria-label={`Remove ${view.examLabel}`}
-        onClick={handleRemove}
-      >
-        <X className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-      </button>
-    </span>
-  );
-}
-
-function ExamName({ name, digital, centred }: ExamNameProps): ReactElement {
-  if (!digital) {
-    return <>{name}</>;
-  }
-  return (
-    <>
-      {centred && (
-        <span
-          className={`${DIGITAL_MARK_CLASSES} ${DIGITAL_MARK_BALANCE_CLASSES}`}
-          aria-hidden="true"
-        />
-      )}
-      {name}
-      <span
-        className={`${DIGITAL_MARK_CLASSES} ${DIGITAL_MARK_TRAILING_CLASSES}`}
-        role="img"
-        aria-label="Digital"
-      >
-        <Monitor className={DIGITAL_MARK_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-      </span>
-    </>
-  );
-}
-
-function ValueCell({ label, children }: ValueCellProps): ReactElement {
-  return (
-    <span data-fit="value" className={FIT_CLASSES}>
-      {label === null ? null : <span className={COLUMN_LABEL_CLASSES}>{label}</span>}
-      <span className="block">{children}</span>
-    </span>
-  );
-}
-
-function fillsCell(row: BoardRow, column: SessionView | undefined): boolean {
-  if (column === undefined) {
-    return false;
-  }
-  return row.fillsCell === undefined || row.fillsCell(column);
-}
-
-function pendingActionFor(kind: PendingAction["kind"], view: SessionView): PendingAction {
+/** What the countdown reads when the action is taken, for the confirmation to quote. */
+function pendingActionFor(kind: PendingActionKind, view: SessionView): PendingAction {
   const remaining =
     view.timer.status === "idle"
       ? view.durationMs
@@ -227,40 +99,74 @@ function pendingActionFor(kind: PendingAction["kind"], view: SessionView): Pendi
   };
 }
 
+function EmptyBoard({ onAddSession }: EmptyBoardProps): ReactElement {
+  return (
+    <div className={EMPTY_BOARD_CLASSES}>
+      <p className={EMPTY_BOARD_TEXT_CLASSES}>No sessions yet</p>
+      <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
+        <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
+        Add Session
+      </button>
+    </div>
+  );
+}
+
+function PendingActionDialog({
+  action,
+  onConfirm,
+  onClose,
+}: PendingActionDialogProps): ReactElement {
+  const { title, message, confirmLabel } = CONFIRMATIONS[action.kind];
+
+  return (
+    <ConfirmDialog
+      title={title}
+      message={message}
+      detail={`${action.examLabel} — ${action.partName} still has ${action.remaining} left.`}
+      confirmLabel={confirmLabel}
+      onConfirm={onConfirm}
+      onClose={onClose}
+    />
+  );
+}
+
 export function Board({
   onAddSession,
   onEditSession,
   onEditCentreNumber,
 }: BoardProps): ReactElement {
   const board = useSyncExternalStore(subscribe, getSnapshot);
-  const now = useSyncExternalStore(subscribe, getBoardClock);
-  const density = densityFor(board.sessions.length);
-  const columns = board.sessions.map((session, index) =>
-    describeSession(session, index + 1, density, now),
-  );
-  const labelLaneVisible = columns.length === 1;
-  const anyColumnCountsDown = columns.some((column) => column.countsDown);
+  const now = useSyncExternalStore(subscribe, getClockSnapshot);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const boardRef = useRef<HTMLElement>(null);
+  const focusBoardAfterClose = useRef(false);
   const regionRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLTableSectionElement>(null);
 
+  const density = densityFor(board.sessions.length);
+  const columns = board.sessions.map((session) => describeSession(session, density, now));
+  const labelLaneVisible = columns.length === 1;
+  const showsCountdown = columns.some((column) => column.countsDown);
+
   const layout: BoardScaleLayout = {
     columns: Math.max(1, columns.length),
-    valueRows: anyColumnCountsDown ? 4 : 3,
-    hasControlsRow: anyColumnCountsDown,
+    valueRows: showsCountdown ? COUNTDOWN_ROWS : SUPPORTING_ROWS,
+    hasControlsRow: showsCountdown,
     labelLane: labelLaneVisible,
   };
-  const heights = rowHeights(layout);
 
   useBoardScale(boardRef, regionRef, tabStripRef, layout);
   useUnloadGuard(columns.some((column) => column.status === "running"));
 
-  function handleThresholdCross() {}
+  /** Removing a column destroys the button that had focus, so take it back. */
+  function focusBoard() {
+    boardRef.current?.focus();
+  }
 
   function handleRemoveRequest(view: SessionView) {
     if (view.status === "idle") {
       removeSession(view.id);
+      focusBoard();
       return;
     }
     setPendingAction(pendingActionFor("remove", view));
@@ -280,6 +186,7 @@ export function Board({
     }
     if (pendingAction.kind === "remove") {
       removeSession(pendingAction.sessionId);
+      focusBoardAfterClose.current = true;
       return;
     }
     resetSession(pendingAction.sessionId);
@@ -287,80 +194,16 @@ export function Board({
 
   function handleClosePendingAction() {
     setPendingAction(null);
+    if (focusBoardAfterClose.current) {
+      focusBoardAfterClose.current = false;
+      focusBoard();
+    }
   }
-
-  const valueClasses = labelLaneVisible ? ALIGNED_VALUE_CLASSES : CENTRED_VALUE_CLASSES;
-  const perColumnLabel = (label: string): string | null => (labelLaneVisible ? null : label);
-
-  const supportingRows: BoardRow[] = [
-    {
-      label: "Exam",
-      countdown: false,
-      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
-      render: (column) => (
-        <ValueCell label={perColumnLabel("Exam")}>
-          <ExamName
-            name={column.examName}
-            digital={column.digital}
-            centred={!labelLaneVisible}
-          />
-        </ValueCell>
-      ),
-    },
-    {
-      label: "Part",
-      countdown: false,
-      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
-      render: (column) => <ValueCell label={perColumnLabel("Part")}>{column.partName}</ValueCell>,
-    },
-    {
-      label: "Time",
-      countdown: false,
-      cellClassesFor: () => `${VALUE_CELL_CLASSES} ${valueClasses}`,
-      render: (column) => (
-        <ValueCell label={perColumnLabel("Time")}>
-          {column.allowedTime}
-          {column.extraMinutes > 0 && (
-            <span className={EXTRA_TIME_CLASSES}>+{column.extraMinutes}min</span>
-          )}
-        </ValueCell>
-      ),
-    },
-  ];
-
-  const countdownRows: BoardRow[] = [
-    {
-      label: "Remaining",
-      countdown: true,
-      fillsCell: (column) => column.countsDown,
-      cellClassesFor: (column) =>
-        column.countsDown ? `${VALUE_CELL_CLASSES} ${valueClasses}` : EMPTY_CELL_CLASSES,
-      rowSpanFor: (column) => (column.countsDown ? undefined : 2),
-      render: (column) =>
-        column.countsDown ? (
-          <RemainingTime
-            label={perColumnLabel("Remaining")}
-            align={labelLaneVisible ? "start" : "center"}
-            timer={column.timer}
-            durationMs={column.durationMs}
-            onThresholdCross={handleThresholdCross}
-          />
-        ) : null,
-    },
-    {
-      label: "Controls",
-      countdown: false,
-      cellClassesFor: () => `${CONTROLS_CELL_CLASSES} ${valueClasses}`,
-      omitsCell: (column) => !column.countsDown,
-      render: (column) => <SessionControls view={column} onRequestReset={handleResetRequest} />,
-    },
-  ];
-
-  const rows = anyColumnCountsDown ? [...supportingRows, ...countdownRows] : supportingRows;
 
   return (
     <section
       ref={boardRef}
+      tabIndex={-1}
       className={BOARD_CLASSES}
       data-density={density}
       data-columns={columns.length}
@@ -368,120 +211,31 @@ export function Board({
       <button
         className={CENTRE_NUMBER_CLASSES}
         type="button"
-        aria-label="Edit centre number"
+        aria-label={`Edit centre no: ${board.centreNumber}`}
         onClick={onEditCentreNumber}
       >
         <Pencil className={CENTRE_NUMBER_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-        Centre no:{" "}
-        <span className={CENTRE_NUMBER_VALUE_CLASSES}>{board.centreNumber}</span>
+        Centre no: <span className={CENTRE_NUMBER_VALUE_CLASSES}>{board.centreNumber}</span>
       </button>
       {columns.length === 0 ? (
-        <div className={EMPTY_BOARD_CLASSES}>
-          <p className={EMPTY_BOARD_TEXT_CLASSES}>No sessions yet</p>
-          <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
-            <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-            Add Session
-          </button>
-        </div>
+        <EmptyBoard onAddSession={onAddSession} />
       ) : (
-        <div ref={regionRef} className={REGION_CLASSES}>
-          <table className={GRID_CLASSES}>
-            <caption className="sr-only">Exam sessions</caption>
-            <colgroup>
-              <col
-                className={labelLaneVisible ? LABEL_COLUMN_CLASSES : COLLAPSED_LABEL_COLUMN_CLASSES}
-              />
-              {columns.map((column) => (
-                <col key={column.id} />
-              ))}
-            </colgroup>
-            <thead ref={tabStripRef} className={TAB_STRIP_CLASSES}>
-              <tr>
-                {labelLaneVisible ? null : <td className={TAB_STRIP_EDGE_CLASSES}></td>}
-                {columns.map((column, index) => (
-                  <th
-                    key={column.id}
-                    className={TAB_STRIP_CELL_CLASSES}
-                    scope="col"
-                    colSpan={labelLaneVisible ? 2 : undefined}
-                    aria-label={column.examLabel}
-                  >
-                    <span className={TAB_ROW_CLASSES}>
-                      <SessionTab
-                        view={column}
-                        onEditSession={onEditSession}
-                        onRequestRemove={handleRemoveRequest}
-                      />
-                      {index === columns.length - 1 && (
-                        <button
-                          className={ADD_BUTTON_CLASSES}
-                          type="button"
-                          aria-label="Add Session"
-                          onClick={onAddSession}
-                          disabled={columns.length >= MAX_SESSIONS}
-                        >
-                          <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-                        </button>
-                      )}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.label}
-                  style={{ height: row.label === "Controls" ? heights.controls : heights.value }}
-                >
-                  <th
-                    className={labelLaneVisible ? ROW_LABEL_CLASSES : COLLAPSED_ROW_LABEL_CLASSES}
-                    scope="row"
-                  >
-                    {labelLaneVisible && row.label !== "Controls" ? (
-                      <span data-fit="label" className={ROW_LABEL_TEXT_CLASSES}>
-                        {row.label}
-                      </span>
-                    ) : (
-                      <span className="sr-only">{row.label}</span>
-                    )}
-                  </th>
-                  {columns.map((column, index) => {
-                    if (row.omitsCell !== undefined && row.omitsCell(column)) {
-                      return null;
-                    }
-                    const rowSpan =
-                      row.rowSpanFor === undefined ? undefined : row.rowSpanFor(column);
-                    const rowReaches =
-                      fillsCell(row, column) || fillsCell(row, columns[index + 1]);
-                    const separator =
-                      index < columns.length - 1 && rowReaches ? SEPARATOR_CLASSES : "";
-                    return (
-                      <td
-                        key={column.id}
-                        className={`${row.cellClassesFor(column)} ${separator}`}
-                        rowSpan={rowSpan}
-                      >
-                        {row.render(column)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <BoardGrid
+          columns={columns}
+          labelLaneVisible={labelLaneVisible}
+          showsCountdown={showsCountdown}
+          heights={rowHeights(layout)}
+          onAddSession={onAddSession}
+          onEditSession={onEditSession}
+          onRequestRemove={handleRemoveRequest}
+          onRequestReset={handleResetRequest}
+          regionRef={regionRef}
+          tabStripRef={tabStripRef}
+        />
       )}
       {pendingAction !== null && (
-        <ConfirmDialog
-          title={pendingAction.kind === "remove" ? "Close This Session?" : "Reset This Countdown?"}
-          message={
-            pendingAction.kind === "remove"
-              ? "Closing removes the column and its countdown from the board."
-              : "Resetting returns the countdown to the full allowed time."
-          }
-          detail={`${pendingAction.examLabel} — ${pendingAction.partName} still has ${pendingAction.remaining} left.`}
-          confirmLabel={pendingAction.kind === "remove" ? "Close Session" : "Reset Countdown"}
+        <PendingActionDialog
+          action={pendingAction}
           onConfirm={handleConfirmPendingAction}
           onClose={handleClosePendingAction}
         />

@@ -4,10 +4,11 @@ import type { Exam } from "../config/exams";
 import {
   MAX_REMAINING_MS,
   composeExamLabel,
-  marksDigitalMode,
   densityFor,
   formatAllowedTime,
+  formatClockSkew,
   formatRemaining,
+  marksDigitalMode,
   partLabel,
   remainingSegments,
   widestRemainingString,
@@ -154,5 +155,23 @@ describe("densityFor", () => {
     [4, "compact"],
   ])("maps %i sessions to %s", (sessionCount, expected) => {
     expect(densityFor(sessionCount)).toBe(expected);
+  });
+});
+
+describe("formatClockSkew", () => {
+  it("reads a backward step as going back", () => {
+    expect(formatClockSkew(-60 * 60_000)).toBe("1h back");
+  });
+
+  it("reads a forward step as going forward", () => {
+    expect(formatClockSkew(25 * 60_000)).toBe("25min forward");
+  });
+
+  it("keeps hours and minutes together", () => {
+    expect(formatClockSkew(-95 * 60_000)).toBe("1h 35min back");
+  });
+
+  it("falls back to seconds for a step under a minute", () => {
+    expect(formatClockSkew(30_000)).toBe("30sec forward");
   });
 });

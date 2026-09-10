@@ -1,16 +1,17 @@
+import { COMPACT_FROM_SESSIONS, MAX_EXTRA_MINUTES } from "../config/board";
 import { exams } from "../config/exams";
 import type { Exam, Mode, Qualifier } from "../config/exams";
 import { PART_SHORT_NAMES } from "../config/partNames";
 import { WARNING_MS } from "../config/thresholds";
-import { COMPACT_FROM_SESSIONS, MAX_EXTRA_MINUTES } from "../config/board";
+import {
+  MINUTES_PER_HOUR,
+  MS_PER_MINUTE,
+  MS_PER_SECOND,
+  SECONDS_PER_HOUR,
+  SECONDS_PER_MINUTE,
+} from "./time";
 
 export type Density = "full" | "compact";
-
-const MS_PER_MINUTE = 60_000;
-const MS_PER_SECOND = 1000;
-const SECONDS_PER_MINUTE = 60;
-const MINUTES_PER_HOUR = 60;
-const SECONDS_PER_HOUR = 3600;
 
 const shortPartNames: Record<string, string> = PART_SHORT_NAMES;
 
@@ -50,6 +51,21 @@ export const formatAllowedTime = (minutes: number, qualifier: Qualifier): string
     case "exact":
       return duration;
   }
+};
+
+/**
+ * Describes how far the system clock moved, for the warning the invigilator
+ * reads. Rounded to whole minutes above a minute, because the exact
+ * milliseconds of a clock step are not information anyone can act on.
+ */
+export const formatClockSkew = (skewMs: number): string => {
+  const direction = skewMs < 0 ? "back" : "forward";
+  const magnitude = Math.abs(skewMs);
+  if (magnitude < MS_PER_MINUTE) {
+    const seconds = Math.round(magnitude / MS_PER_SECOND);
+    return `${seconds}sec ${direction}`;
+  }
+  return `${formatMinutes(Math.round(magnitude / MS_PER_MINUTE))} ${direction}`;
 };
 
 export const remainingSegments = (ms: number): RemainingSegment[] => {

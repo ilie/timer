@@ -1,8 +1,14 @@
-import { DEFAULT_CENTRE_NUMBER, MAX_SESSIONS } from "../config/board";
-import { exams } from "../config/exams";
-import type { Exam, Mode } from "../config/exams";
+import {
+  DEFAULT_CENTRE_NUMBER,
+  MAX_BREAK_MINUTES,
+  MAX_EXTRA_MINUTES,
+  MAX_SESSIONS,
+} from "../config/board";
+import { examByName } from "../config/exams";
+import type { Mode } from "../config/exams";
 import { STORAGE_KEY } from "../config/storage";
-import { pause, reset, restore, resume, start } from "../lib/timer";
+import { MS_PER_MINUTE } from "../lib/time";
+import { extend, pause, reanchor, reset, restore, resume, start } from "../lib/timer";
 import type { TimerState } from "../lib/timer";
 
 export type SessionConfig = {
@@ -27,6 +33,10 @@ export type BoardState = {
   sessions: Session[];
   break: BreakState;
   clockJumpDetected: boolean;
+  /** How far the system clock moved when the jump was noticed, 0 if unknown. */
+  clockSkewMs: number;
+  /** True when the jump was compensated for and remaining times still hold. */
+  clockTimesPreserved: boolean;
   persistFailed: boolean;
   restoreDiscarded: boolean;
   revision: number;
@@ -40,8 +50,6 @@ type StoredBoard = {
 
 const DEFAULT_BREAK_MINUTES = 15;
 
-const MS_PER_MINUTE = 60_000;
-
 const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
 
 const emptyBoard = (): BoardState => ({
@@ -49,6 +57,8 @@ const emptyBoard = (): BoardState => ({
   sessions: [],
   break: { timer: reset(), minutes: DEFAULT_BREAK_MINUTES },
   clockJumpDetected: false,
+  clockSkewMs: 0,
+  clockTimesPreserved: false,
   persistFailed: false,
   restoreDiscarded: false,
   revision: 0,
@@ -60,11 +70,8 @@ const listeners = new Set<() => void>();
 
 let expiryTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const findExam = (examName: string): Exam | undefined =>
-  exams.find((candidate) => candidate.examName === examName);
-
 export const sessionDurationMs = (session: Session): number => {
-  const part = findExam(session.examName)?.examParts[session.partIndex];
+  const part = examByName(session.examName)?.examParts[session.partIndex];
   if (part === undefined) {
     return 0;
   }
@@ -90,7 +97,8 @@ const parseTimerState = (value: unknown): TimerState | null => {
   if (
     value.status === "paused" &&
     typeof value.remainingMs === "number" &&
-    Number.isFinite(value.remainingMs)
+    Number.isFinite(value.remainingMs) &&
+    value.remainingMs >= 0
   ) {
     return { status: "paused", remainingMs: value.remainingMs };
   }
@@ -117,12 +125,13 @@ const parseSession = (value: unknown): Session | null => {
     partIndex < 0 ||
     !isWholeNumber(extraMinutes) ||
     extraMinutes < 0 ||
+    extraMinutes > MAX_EXTRA_MINUTES ||
     mode === null ||
     timer === null
   ) {
     return null;
   }
-  const exam = findExam(examName);
+  const exam = examByName(examName);
   if (exam === undefined || exam.examParts[partIndex] === undefined) {
     return null;
   }
@@ -139,7 +148,12 @@ const parseBreak = (value: unknown): BreakState | null => {
   }
   const timer = parseTimerState(value.timer);
   const { minutes } = value;
-  if (timer === null || typeof minutes !== "number" || !Number.isFinite(minutes) || minutes < 0) {
+  if (
+    timer === null ||
+    !isWholeNumber(minutes) ||
+    minutes < 0 ||
+    minutes > MAX_BREAK_MINUTES
+  ) {
     return null;
   }
   if (!pausedRemainingFitsDuration(timer, minutes * MS_PER_MINUTE)) {
@@ -274,6 +288,9 @@ export const hydrateFromStorage = (): void => {
   }
   const now = Date.now();
   const restoredSessions = restoreSessions(stored.sessions, now);
+  // The break is deliberately not clamped: unlike a session it is not rendered,
+  // so a stale stored value harms nothing, and leaving the far-future case
+  // reachable keeps the expiry-scheduling overflow guard under test.
   const restoredBreak = restore(stored.break.timer, stored.break.minutes * MS_PER_MINUTE, now, {
     clamp: false,
   });
@@ -283,7 +300,8 @@ export const hydrateFromStorage = (): void => {
     centreNumber: stored.centreNumber,
     sessions: restoredSessions.sessions,
     break: { ...stored.break, timer: restoredBreak.state },
-    clockJumpDetected: stickyFailures.clockJumpDetected || restoredSessions.clamped,
+    clockJumpDetected:
+      stickyFailures.clockJumpDetected || restoredSessions.clamped || restoredBreak.clamped,
   });
 };
 
@@ -308,6 +326,19 @@ export const subscribe = (listener: () => void): (() => void) => {
 };
 
 export const getSnapshot = (): BoardState => snapshot;
+
+let clockSample = { revision: -1, now: 0 };
+
+/**
+ * The wall-clock reading the board renders against, re-sampled once per store
+ * revision so that `useSyncExternalStore` sees a stable value between renders.
+ */
+export const getClockSnapshot = (): number => {
+  if (clockSample.revision !== snapshot.revision) {
+    clockSample = { revision: snapshot.revision, now: Date.now() };
+  }
+  return clockSample.now;
+};
 
 const replaceSession = (id: string, replacement: (session: Session) => Session): void => {
   let changed = false;
@@ -392,10 +423,29 @@ const matchesConfig = (session: Session, config: SessionConfig): boolean =>
   session.mode === config.mode &&
   session.extraMinutes === config.extraMinutes;
 
+const onlyExtraMinutesDiffer = (session: Session, config: SessionConfig): boolean =>
+  session.examName === config.examName &&
+  session.partIndex === config.partIndex &&
+  session.mode === config.mode &&
+  session.extraMinutes !== config.extraMinutes;
+
+/**
+ * Re-configuring a session normally re-seeds its timer, because a different
+ * component means a different duration from a standing start. Granting extra
+ * time is the exception: it happens mid-component for access arrangements, so
+ * the time already served has to survive it.
+ */
 export const setSessionConfig = (id: string, config: SessionConfig): void => {
-  replaceSession(id, (session) =>
-    matchesConfig(session, config) ? session : { ...session, ...config, timer: reset() },
-  );
+  replaceSession(id, (session) => {
+    if (matchesConfig(session, config)) {
+      return session;
+    }
+    if (session.timer.status !== "idle" && onlyExtraMinutesDiffer(session, config)) {
+      const deltaMs = (config.extraMinutes - session.extraMinutes) * MS_PER_MINUTE;
+      return { ...session, ...config, timer: extend(session.timer, deltaMs) };
+    }
+    return { ...session, ...config, timer: reset() };
+  });
 };
 
 export const setCentreNumber = (centreNumber: string): void => {
@@ -408,10 +458,52 @@ export const setCentreNumber = (centreNumber: string): void => {
 export const advanceComponent = (id: string): void => {
   replaceSession(id, (session) => {
     const nextPartIndex = session.partIndex + 1;
-    if (findExam(session.examName)?.examParts[nextPartIndex] === undefined) {
+    if (examByName(session.examName)?.examParts[nextPartIndex] === undefined) {
       return session;
     }
     return { ...session, partIndex: nextPartIndex, timer: reset() };
+  });
+};
+
+const hasRunningTimer = (state: BoardState): boolean =>
+  state.break.timer.status === "running" ||
+  state.sessions.some((session) => session.timer.status === "running");
+
+/**
+ * The wall clock moved by a known amount while we were demonstrably running, so
+ * every running deadline moves with it and the time remaining is untouched.
+ */
+export const applyClockStep = (skewMs: number): void => {
+  if (!hasRunningTimer(snapshot)) {
+    return;
+  }
+  const sessions = snapshot.sessions.map((session) => {
+    const timer = reanchor(session.timer, skewMs);
+    return timer === session.timer ? session : { ...session, timer };
+  });
+  commit({
+    ...snapshot,
+    sessions,
+    break: { ...snapshot.break, timer: reanchor(snapshot.break.timer, skewMs) },
+    clockJumpDetected: true,
+    clockSkewMs: skewMs,
+    clockTimesPreserved: true,
+  });
+};
+
+/**
+ * The clocks disagree but we cannot prove why, so nothing is adjusted and the
+ * invigilator is asked to check the board against a trusted clock.
+ */
+export const reportUnverifiedClockJump = (skewMs: number): void => {
+  if (!hasRunningTimer(snapshot)) {
+    return;
+  }
+  applySnapshot({
+    ...snapshot,
+    clockJumpDetected: true,
+    clockSkewMs: skewMs,
+    clockTimesPreserved: false,
   });
 };
 
@@ -419,7 +511,12 @@ export const setClockJumpDetected = (detected: boolean): void => {
   if (snapshot.clockJumpDetected === detected) {
     return;
   }
-  applySnapshot({ ...snapshot, clockJumpDetected: detected });
+  applySnapshot({
+    ...snapshot,
+    clockJumpDetected: detected,
+    clockSkewMs: detected ? snapshot.clockSkewMs : 0,
+    clockTimesPreserved: detected ? snapshot.clockTimesPreserved : false,
+  });
 };
 
 hydrateFromStorage();

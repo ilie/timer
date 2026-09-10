@@ -3,10 +3,9 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RemainingTime } from "./RemainingTime";
 import { STORAGE_KEY } from "../config/storage";
-import { DISPLAY_TICK_MS } from "../config/timing";
 import { formatRemaining } from "../lib/format";
 import { remainingMs } from "../lib/timer";
-import type { Threshold, TimerState } from "../lib/timer";
+import type { TimerState } from "../lib/timer";
 import { getSnapshot, hydrateFromStorage, startSession } from "../store/boardStore";
 
 const EXAM_START = new Date("2026-06-11T09:00:00.000Z");
@@ -47,8 +46,6 @@ const advance = (ms: number): void => {
     vi.advanceTimersByTime(ms);
   });
 };
-
-const noThresholdHandling = (): void => {};
 
 const renderedRemaining = (): string => {
   const value = screen.getByRole("timer").textContent;
@@ -93,7 +90,6 @@ describe("anchoring", () => {
         label={null}
         timer={timer}
         durationMs={READING_MS}
-        onThresholdCross={noThresholdHandling}
       />,
     );
 
@@ -109,52 +105,10 @@ describe("anchoring", () => {
         label={null}
         timer={{ status: "idle" }}
         durationMs={READING_MS}
-        onThresholdCross={noThresholdHandling}
       />,
     );
 
     expect(renderedRemaining()).toBe(formatRemaining(READING_MS));
-  });
-});
-
-describe("threshold crossings", () => {
-  it("reports each crossing once, in order, driving eleven minutes to zero", () => {
-    const crossings: Threshold[] = [];
-    const recordCrossing = (threshold: Threshold): void => {
-      crossings.push(threshold);
-    };
-    const timer: TimerState = { status: "running", endsAt: Date.now() + 11 * 60_000 };
-
-    render(
-      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
-    );
-
-    expect(crossings).toEqual([]);
-
-    for (let second = 0; second < 11 * 60; second += 1) {
-      advance(1000);
-    }
-
-    expect(crossings).toEqual(["warning", "critical", "zero"]);
-  });
-
-  it("reports nothing while the threshold stays the same", () => {
-    const crossings: Threshold[] = [];
-    const recordCrossing = (threshold: Threshold): void => {
-      crossings.push(threshold);
-    };
-    const timer: TimerState = { status: "running", endsAt: Date.now() + 11 * 60_000 };
-
-    const view = render(
-      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
-    );
-
-    advance(DISPLAY_TICK_MS * 4);
-    view.rerender(
-      <RemainingTime label={null} timer={timer} durationMs={11 * 60_000} onThresholdCross={recordCrossing} />,
-    );
-
-    expect(crossings).toEqual([]);
   });
 });
 
@@ -165,10 +119,9 @@ describe("width reservation", () => {
     const reservations = values.map((remaining) => {
       const view = render(
         <RemainingTime
-        label={null}
+          label={null}
           timer={{ status: "running", endsAt: Date.now() + remaining }}
           durationMs={durationMs}
-          onThresholdCross={noThresholdHandling}
         />,
       );
       const reserved = reservedRenderings();
@@ -187,10 +140,9 @@ describe("width reservation", () => {
     const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
       const view = render(
         <RemainingTime
-        label={null}
+          label={null}
           timer={{ status: "running", endsAt: Date.now() + remaining }}
           durationMs={durationMs}
-          onThresholdCross={noThresholdHandling}
         />,
       );
       const state = document.querySelector("[data-state]")?.getAttribute("data-state");
@@ -211,7 +163,6 @@ describe("never counting upward", () => {
         label={null}
         timer={{ status: "idle" }}
         durationMs={READING_MS}
-        onThresholdCross={noThresholdHandling}
       />,
     );
 
@@ -228,7 +179,6 @@ describe("never counting upward", () => {
         label={null}
         timer={started}
         durationMs={READING_MS}
-        onThresholdCross={noThresholdHandling}
       />,
     );
 
@@ -238,9 +188,7 @@ describe("never counting upward", () => {
   it("never ticks upward across a run", () => {
     const durationMs = 12 * 60_000;
     const timer: TimerState = { status: "running", endsAt: Date.now() + durationMs };
-    render(
-      <RemainingTime label={null} timer={timer} durationMs={durationMs} onThresholdCross={noThresholdHandling} />,
-    );
+    render(<RemainingTime label={null} timer={timer} durationMs={durationMs} />);
 
     let previous = remainingMs(timer, Date.now());
     for (let step = 0; step < 4 * 60; step += 1) {

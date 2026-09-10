@@ -465,7 +465,7 @@ test("persists an edited centre number and leaves it alone when cancelled", asyn
   const user = userEvent.setup();
   render(<App />);
 
-  await user.click(screen.getByRole("button", { name: "Edit centre number" }));
+  await user.click(screen.getByRole("button", { name: /^Edit centre no:/ }));
   const centreNumber = screen.getByLabelText("Centre number");
   await user.clear(centreNumber);
   await user.type(centreNumber, "ES777");
@@ -473,7 +473,7 @@ test("persists an edited centre number and leaves it alone when cancelled", asyn
 
   expect(getSnapshot().centreNumber).toBe("ES432");
 
-  await user.click(screen.getByRole("button", { name: "Edit centre number" }));
+  await user.click(screen.getByRole("button", { name: /^Edit centre no:/ }));
   const reopened = screen.getByLabelText("Centre number");
   await user.clear(reopened);
   await user.type(reopened, "ES777");
@@ -484,7 +484,7 @@ test("persists an edited centre number and leaves it alone when cancelled", asyn
   hydrateFromStorage();
 
   expect(getSnapshot().centreNumber).toBe("ES777");
-  expect(screen.getByRole("button", { name: "Edit centre number" })).toHaveTextContent(
+  expect(screen.getByRole("button", { name: /^Edit centre no:/ })).toHaveTextContent(
     "Centre no: ES777",
   );
 });

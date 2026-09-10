@@ -7,6 +7,9 @@ type ModalDialogProps = {
   title: string;
   titleIcon: LucideIcon;
   submitLabel: string;
+  /** Id of the element describing the dialog, announced after its title. */
+  describedBy?: string;
+  /** Styles the submit button as a warning and swaps its tick for an alert. */
   destructive?: boolean;
   onSubmit: () => boolean;
   onClose: () => void;
@@ -46,35 +49,12 @@ const BUTTON_ICON_CLASSES = "h-[1em] w-[1em]";
 
 const TITLE_ICON_CLASSES = "h-[0.85em] w-[0.85em] shrink-0";
 
-export const DIALOG_FIELD_CLASSES = "flex flex-col gap-2";
-
-export const DIALOG_FIELD_HEADER_CLASSES = "flex items-baseline gap-2";
-
-export const DIALOG_LABEL_CLASSES =
-  "inline-flex items-center gap-2 text-base font-medium text-linguaskill-slate-700";
-
-export const DIALOG_REQUIRED_MARK_CLASSES = "text-sm text-linguaskill-slate-400";
-
-export const DIALOG_CONTROL_CLASSES =
-  "w-full rounded-lg border border-linguaskill-slate-300 bg-white px-4 py-3 text-lg text-linguaskill-slate-900 transition-colors hover:border-linguaskill-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-700 disabled:cursor-not-allowed disabled:border-linguaskill-slate-200 disabled:bg-linguaskill-slate-50 disabled:text-linguaskill-slate-400";
-
-export const DIALOG_CONTROL_INVALID_CLASSES =
-  "w-full rounded-lg border-2 border-vlec-red-700 bg-white px-4 py-3 text-lg text-linguaskill-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-red-700 disabled:cursor-not-allowed disabled:bg-linguaskill-slate-100 disabled:text-linguaskill-slate-500";
-
-export const DIALOG_HINT_CLASSES = "text-base text-linguaskill-slate-500";
-
-export const DIALOG_ERROR_CLASSES =
-  "inline-flex items-center gap-2 text-base font-semibold text-vlec-red-700";
-
-export const DIALOG_ERROR_ICON_CLASSES = "h-[1em] w-[1em] shrink-0";
-
-export const DIALOG_LABEL_ICON_CLASSES = "h-[1em] w-[1em] shrink-0 text-linguaskill-slate-400";
-
 export function ModalDialog({
   title,
   titleIcon: TitleIcon,
   submitLabel,
-  destructive,
+  describedBy,
+  destructive = false,
   onSubmit,
   onClose,
   children,
@@ -98,6 +78,10 @@ export function ModalDialog({
       return;
     }
     preferred.focus();
+    // Deliberately no cleanup that closes the dialog: `close()` fires the
+    // dialog's close event, which every caller reads as the user dismissing it.
+    // Each close path here already closes before unmounting, so there is no
+    // orphaned top-layer entry to tidy up.
   }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -130,6 +114,7 @@ export function ModalDialog({
       ref={dialogRef}
       className={DIALOG_CLASSES}
       aria-labelledby={titleId}
+      aria-describedby={describedBy}
       onClose={onClose}
       onMouseDown={handlePointerDown}
       onClick={handleClick}
@@ -161,10 +146,10 @@ export function ModalDialog({
             Cancel
           </button>
           <button
-            className={destructive === true ? DESTRUCTIVE_BUTTON_CLASSES : SUBMIT_BUTTON_CLASSES}
+            className={destructive ? DESTRUCTIVE_BUTTON_CLASSES : SUBMIT_BUTTON_CLASSES}
             type="submit"
           >
-            {destructive === true ? (
+            {destructive ? (
               <TriangleAlert className={BUTTON_ICON_CLASSES} aria-hidden="true" />
             ) : (
               <Check className={BUTTON_ICON_CLASSES} aria-hidden="true" />

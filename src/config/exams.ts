@@ -190,3 +190,7 @@ export const exams = [
     ],
   },
 ] as const satisfies readonly Exam[];
+
+export function examByName(examName: string): Exam | undefined {
+  return exams.find((candidate) => candidate.examName === examName);
+}

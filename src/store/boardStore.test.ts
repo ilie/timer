@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { STORAGE_KEY } from "../config/storage";
-import { statusOf } from "../lib/timer";
+import { remainingMs, statusOf } from "../lib/timer";
 import {
   addSession,
   advanceComponent,
+  applyClockStep,
   getSnapshot,
   hydrateFromStorage,
   pauseSession,
@@ -514,5 +515,143 @@ describe("session duration", () => {
 
   it("is zero for a session whose component no longer exists", () => {
     expect(sessionDurationMs(readingSession({ partIndex: 9 }))).toBe(0);
+  });
+});
+
+const readingConfig = {
+  examName: "B2 First",
+  partIndex: 0,
+  mode: "paper",
+  extraMinutes: 0,
+} as const;
+
+const remainingOf = (id: string): number => {
+  const timer = timerOf(id);
+  if (timer === undefined) {
+    throw new Error(`No session ${id}`);
+  }
+  return remainingMs(timer, Date.now());
+};
+
+describe("granting extra time part way through a component", () => {
+  it("adds the time to a running session instead of restarting it", () => {
+    seed([idleSession]);
+    startSession("reading");
+    vi.advanceTimersByTime(40 * 60_000);
+
+    setSessionConfig("reading", { ...readingConfig, extraMinutes: 25 });
+
+    // 35 minutes were left of the 75; the extra 25 make 60. Restarting would show 100.
+    expect(remainingOf("reading")).toBe(60 * 60_000);
+    expect(statusOf(timerOf("reading")!, Date.now())).toBe("running");
+  });
+
+  it("adds the time to a paused session", () => {
+    seed([idleSession]);
+    startSession("reading");
+    vi.advanceTimersByTime(40 * 60_000);
+    pauseSession("reading");
+
+    setSessionConfig("reading", { ...readingConfig, extraMinutes: 25 });
+
+    expect(remainingOf("reading")).toBe(60 * 60_000);
+    expect(timerOf("reading")?.status).toBe("paused");
+  });
+
+  it("takes time away again when the extra time is reduced", () => {
+    seed([idleSession]);
+    startSession("reading");
+    vi.advanceTimersByTime(40 * 60_000);
+    setSessionConfig("reading", { ...readingConfig, extraMinutes: 25 });
+
+    setSessionConfig("reading", { ...readingConfig, extraMinutes: 10 });
+
+    expect(remainingOf("reading")).toBe(45 * 60_000);
+  });
+
+  it("still re-seeds the timer when the component itself changes", () => {
+    seed([idleSession]);
+    startSession("reading");
+    vi.advanceTimersByTime(40 * 60_000);
+
+    setSessionConfig("reading", { ...readingConfig, partIndex: 1 });
+
+    expect(timerOf("reading")).toEqual({ status: "idle" });
+  });
+
+  it("leaves an idle session idle when extra time is added before the start", () => {
+    seed([idleSession]);
+
+    setSessionConfig("reading", { ...readingConfig, extraMinutes: 25 });
+
+    expect(timerOf("reading")).toEqual({ status: "idle" });
+    expect(sessionDurationMs(sessionOf("reading")!)).toBe(100 * 60_000);
+  });
+});
+
+describe("stored state that would break the board", () => {
+  it("rejects extra minutes beyond the allowed maximum", () => {
+    // Left unbounded this reaches a per-minute loop on the render path.
+    seed([{ ...idleSession, extraMinutes: 1_000_000_000 }]);
+
+    expect(getSnapshot().sessions).toEqual([]);
+    expect(getSnapshot().restoreDiscarded).toBe(true);
+  });
+
+  it("rejects a paused timer owing negative time", () => {
+    seed([{ ...idleSession, timer: { status: "paused", remainingMs: -1 } }]);
+
+    expect(getSnapshot().sessions).toEqual([]);
+    expect(getSnapshot().restoreDiscarded).toBe(true);
+  });
+
+  it("rejects a break longer than the allowed maximum", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        centreNumber: "ES432",
+        sessions: [],
+        break: { timer: { status: "idle" }, minutes: 100_000 },
+      }),
+    );
+    hydrateFromStorage();
+
+    expect(getSnapshot().restoreDiscarded).toBe(true);
+  });
+
+  it("rejects a fractional break length", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        centreNumber: "ES432",
+        sessions: [],
+        break: { timer: { status: "idle" }, minutes: 15.5 },
+      }),
+    );
+    hydrateFromStorage();
+
+    expect(getSnapshot().restoreDiscarded).toBe(true);
+  });
+});
+
+describe("compensating for a system clock step", () => {
+  it("moves every running deadline with the clock and persists the correction", () => {
+    seed([idleSession]);
+    startSession("reading");
+    const before = remainingOf("reading");
+
+    applyClockStep(-60 * 60_000);
+    vi.setSystemTime(Date.now() - 60 * 60_000);
+
+    expect(remainingOf("reading")).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toContain(String(endsAtOf("reading")));
+  });
+
+  it("says nothing when no exam is running", () => {
+    seed([idleSession]);
+
+    applyClockStep(-60 * 60_000);
+
+    expect(getSnapshot().clockJumpDetected).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "build", "**/*.jsx", "**/*.js"],
+    ignores: ["dist", "build"],
   },
   {
     files: ["src/**/*.{ts,tsx}", "vite.config.ts"],

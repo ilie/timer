@@ -91,3 +91,52 @@ describe("exams", () => {
     }
   });
 });
+
+// These durations are maintained by hand and drive a live exam clock, so a typo
+// here is a wrong countdown in the room. Nothing else in the app re-checks them.
+describe("exam data every countdown depends on", () => {
+  it("gives every component a whole, positive number of minutes", () => {
+    for (const part of allParts) {
+      expect(Number.isInteger(part.minutes), `${part.id} minutes must be a whole number`).toBe(
+        true,
+      );
+      expect(part.minutes, `${part.id} must last longer than no time at all`).toBeGreaterThan(0);
+      expect(Number.isFinite(part.minutes), `${part.id} minutes must be finite`).toBe(true);
+    }
+  });
+
+  it("keeps every component within a plausible exam length", () => {
+    for (const part of allParts) {
+      expect(part.minutes, `${part.id} is longer than any Cambridge paper`).toBeLessThanOrEqual(
+        240,
+      );
+    }
+  });
+
+  it("gives every part an id unique across the whole catalogue", () => {
+    const ids = allParts.map((part) => part.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("gives every exam a name, a short name, a mode and at least one part", () => {
+    for (const exam of allExams) {
+      expect(exam.examName.trim()).not.toBe("");
+      expect(exam.shortName.trim()).not.toBe("");
+      expect(exam.examParts.length).toBeGreaterThan(0);
+      expect(exam.modes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("names every exam and short name uniquely, so a column cannot be ambiguous", () => {
+    const names = allExams.map((exam) => exam.examName);
+    const shortNames = allExams.map((exam) => exam.shortName);
+    expect(new Set(names).size).toBe(names.length);
+    expect(new Set(shortNames).size).toBe(shortNames.length);
+  });
+
+  it("gives every part a non-empty name", () => {
+    for (const part of allParts) {
+      expect(part.name.trim(), `${part.id} needs a name`).not.toBe("");
+    }
+  });
+});

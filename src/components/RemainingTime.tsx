@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { ReactElement } from "react";
+import { BoardValue } from "./BoardValue";
 import { useNow } from "../hooks/useNow";
 import { remainingSegments, reservationSegments } from "../lib/format";
 import type { RemainingSegment } from "../lib/format";
 import { remainingMs, thresholdOf } from "../lib/timer";
-import type { Threshold, TimerState } from "../lib/timer";
+import type { TimerState } from "../lib/timer";
 
 export type ValueAlignment = "start" | "center";
 
@@ -13,18 +14,11 @@ type RemainingTimeProps = {
   align?: ValueAlignment;
   timer: TimerState;
   durationMs: number;
-  onThresholdCross: (threshold: Threshold) => void;
 };
 
 type SegmentRunProps = {
   segments: readonly RemainingSegment[];
 };
-
-export const FIT_CLASSES =
-  "inline-block whitespace-nowrap align-middle leading-none text-[length:var(--board-value-size,1.75rem)]";
-
-export const COLUMN_LABEL_CLASSES =
-  "mb-[0.35em] block text-[0.28em] font-semibold uppercase leading-tight tracking-[0.2em] text-linguaskill-slate-400";
 
 const CLOCK_CLASSES =
   "group/countdown inline-grid grid-cols-1 grid-rows-1 tabular-nums text-vlec-blue-900 data-[state=warning]:text-amber-700 data-[state=critical]:text-vlec-red-700 data-[state=zero]:text-vlec-red-700";
@@ -40,6 +34,10 @@ const LAYER_CLASSES =
 const RESERVATION_CLASSES = "col-start-1 row-start-1 invisible whitespace-nowrap font-black";
 
 const SMALL_SEGMENT_CLASSES = "text-[0.52em] tracking-tight";
+
+function segmentsKey(segments: readonly RemainingSegment[]): string {
+  return segments.map((segment) => segment.text).join("");
+}
 
 function SegmentRun({ segments }: SegmentRunProps): ReactElement {
   return (
@@ -62,7 +60,6 @@ export function RemainingTime({
   align = "center",
   timer,
   durationMs,
-  onThresholdCross,
 }: RemainingTimeProps): ReactElement {
   const now = useNow();
   const remaining =
@@ -70,24 +67,16 @@ export function RemainingTime({
       ? durationMs
       : Math.max(0, Math.min(remainingMs(timer, now), durationMs));
   const threshold = thresholdOf(remaining);
-  const lastReportedThreshold = useRef(threshold);
+  // Every rendering the countdown can take, laid invisibly under the live one so
+  // the column never resizes as the digits change.
   const reservations = useMemo(() => reservationSegments(durationMs), [durationMs]);
 
-  useEffect(() => {
-    if (lastReportedThreshold.current === threshold) {
-      return;
-    }
-    lastReportedThreshold.current = threshold;
-    onThresholdCross(threshold);
-  }, [threshold, onThresholdCross]);
-
   return (
-    <span data-fit="value" className={FIT_CLASSES}>
-      {label === null ? null : <span className={COLUMN_LABEL_CLASSES}>{label}</span>}
+    <BoardValue label={label}>
       <span className={`${CLOCK_CLASSES} ${ALIGNMENT_CLASSES[align]}`} data-state={threshold}>
         {reservations.map((segments) => (
           <span
-            key={segments.map((segment) => segment.text).join("")}
+            key={segmentsKey(segments)}
             className={RESERVATION_CLASSES}
             aria-hidden="true"
             data-reservation
@@ -95,10 +84,10 @@ export function RemainingTime({
             <SegmentRun segments={segments} />
           </span>
         ))}
-        <span className={LAYER_CLASSES} role="timer">
+        <span className={LAYER_CLASSES} role="timer" aria-live="off">
           <SegmentRun segments={remainingSegments(remaining)} />
         </span>
       </span>
-    </span>
+    </BoardValue>
   );
 }

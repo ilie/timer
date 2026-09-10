@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  detectClockJump,
+  classifyClockJump,
+  extend,
   pause,
+  reanchor,
   remainingMs,
   reset,
   restore,
@@ -174,34 +176,149 @@ describe("restore", () => {
   });
 });
 
-describe("detectClockJump", () => {
+describe("classifyClockJump", () => {
   const prevDate = 1_760_000_000_000;
   const prevPerf = 5_000;
+  const SAMPLE_MS = 5_000;
 
-  it.each([
-    ["a steady clock", 250, 250, "none"],
-    ["a scheduling hiccup within tolerance", 150, 250, "none"],
-    ["a backward NTP step", -30_000, 250, "backward"],
-    ["ten minutes of OS sleep", 600_000, 250, "none"],
-  ] as const)("reports %s", (_scenario, dateDelta, perfDelta, expected) => {
-    expect(
-      detectClockJump({
-        prevDate,
-        prevPerf,
-        nowDate: prevDate + dateDelta,
-        nowPerf: prevPerf + perfDelta,
-      }),
-    ).toBe(expected);
+  const classify = (
+    dateDelta: number,
+    perfDelta: number,
+    pageStayedVisible = true,
+  ): ReturnType<typeof classifyClockJump> =>
+    classifyClockJump({
+      prevDate,
+      prevPerf,
+      nowDate: prevDate + dateDelta,
+      nowPerf: prevPerf + perfDelta,
+      expectedMs: SAMPLE_MS,
+      pageStayedVisible,
+    });
+
+  it("reports a steady clock", () => {
+    expect(classify(SAMPLE_MS, SAMPLE_MS)).toEqual({ kind: "none" });
   });
 
-  it("never reports a forward discrepancy of any size", () => {
-    expect(
-      detectClockJump({
-        prevDate,
-        prevPerf,
-        nowDate: prevDate + 24 * HOUR,
-        nowPerf: prevPerf,
-      }),
-    ).toBe("none");
+  it("reports a scheduling hiccup within tolerance", () => {
+    expect(classify(SAMPLE_MS - 1_900, SAMPLE_MS)).toEqual({ kind: "none" });
+  });
+
+  it("measures a backward step taken while the sampler kept running", () => {
+    expect(classify(SAMPLE_MS - 30_000, SAMPLE_MS)).toEqual({
+      kind: "stepped",
+      skewMs: -30_000,
+    });
+  });
+
+  it("measures a forward step taken while the sampler kept running", () => {
+    expect(classify(SAMPLE_MS + 30_000, SAMPLE_MS)).toEqual({
+      kind: "stepped",
+      skewMs: 30_000,
+    });
+  });
+
+  // The signature of OS sleep is identical to a forward clock step, so the only
+  // safe reading is that we cannot tell. Adjusting on this would hand candidates
+  // back the time the machine spent asleep.
+  it("refuses to call ten minutes of OS sleep a clock step", () => {
+    expect(classify(600_000, 0)).toEqual({ kind: "unverified", skewMs: 600_000 });
+  });
+
+  it("refuses to judge a gap where the page was hidden", () => {
+    expect(classify(SAMPLE_MS + 30_000, SAMPLE_MS, false)).toEqual({
+      kind: "unverified",
+      skewMs: 30_000,
+    });
+  });
+
+  it("refuses to judge a gap where the sampler ran far behind schedule", () => {
+    expect(classify(90_000, 60_000)).toEqual({ kind: "unverified", skewMs: 30_000 });
+  });
+});
+
+describe("reanchor", () => {
+  const endsAt = EXAM_START.getTime() + FORTY_FIVE_MINUTES;
+
+  it("carries a running deadline with the clock so the remaining time holds", () => {
+    const running: TimerState = { status: "running", endsAt };
+    const beforeStep = remainingMs(running, EXAM_START.getTime());
+    const stepped = reanchor(running, -HOUR);
+
+    expect(remainingMs(stepped, EXAM_START.getTime() - HOUR)).toBe(beforeStep);
+  });
+
+  it("leaves a paused timer alone, since it holds a duration not an instant", () => {
+    const paused: TimerState = { status: "paused", remainingMs: FORTY_FIVE_MINUTES };
+    expect(reanchor(paused, -HOUR)).toBe(paused);
+  });
+
+  it("leaves an idle timer alone", () => {
+    const idle: TimerState = { status: "idle" };
+    expect(reanchor(idle, HOUR)).toBe(idle);
+  });
+});
+
+describe("extend", () => {
+  it("adds time to a running timer without losing the time already served", () => {
+    const running: TimerState = { status: "running", endsAt: EXAM_START.getTime() + 35 * MINUTE };
+    const extended = extend(running, 25 * MINUTE);
+
+    expect(remainingMs(extended, EXAM_START.getTime())).toBe(60 * MINUTE);
+  });
+
+  it("adds time to a paused timer", () => {
+    const paused: TimerState = { status: "paused", remainingMs: 10 * MINUTE };
+    expect(extend(paused, 5 * MINUTE)).toEqual({ status: "paused", remainingMs: 15 * MINUTE });
+  });
+
+  it("never leaves a paused timer owing negative time", () => {
+    const paused: TimerState = { status: "paused", remainingMs: 5 * MINUTE };
+    expect(extend(paused, -10 * MINUTE)).toEqual({ status: "paused", remainingMs: 0 });
+  });
+
+  it("leaves an idle timer alone", () => {
+    const idle: TimerState = { status: "idle" };
+    expect(extend(idle, 25 * MINUTE)).toBe(idle);
+  });
+});
+
+describe("a session that spans the Spanish DST transition", () => {
+  // At 03:00 CEST on 25 October 2026 Spain puts its clocks back to 02:00 CET.
+  const TRANSITION_UTC = Date.parse("2026-10-25T01:00:00.000Z");
+  const localTime = (instant: number): string =>
+    new Date(instant).toLocaleTimeString("es-ES", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+  it("measures real elapsed time, not the movement of the local clock", () => {
+    const startedAt = TRANSITION_UTC - 30 * MINUTE;
+    const running = start(75 * MINUTE, startedAt);
+
+    // The local clock goes back an hour part way through, so it reads only
+    // fifteen minutes later at the end of a seventy-five minute paper.
+    expect(localTime(startedAt)).toBe("02:30");
+    expect(localTime(startedAt + 75 * MINUTE)).toBe("02:45");
+
+    // The countdown is unmoved by that: it still runs the full duration.
+    expect(remainingMs(running, startedAt)).toBe(75 * MINUTE);
+    expect(remainingMs(running, startedAt + 30 * MINUTE)).toBe(45 * MINUTE);
+    expect(remainingMs(running, startedAt + 75 * MINUTE)).toBe(0);
+    expect(statusOf(running, startedAt + 75 * MINUTE)).toBe("finished");
+  });
+
+  it("survives a reload part way through the transition", () => {
+    const startedAt = TRANSITION_UTC - 30 * MINUTE;
+    const running = start(75 * MINUTE, startedAt);
+    const reloadedAt = TRANSITION_UTC + 30 * MINUTE;
+
+    // A reload re-derives from the stored absolute instant, so the hour the
+    // local clock gave back does not become an hour of extra exam time.
+    const restored = restore(running, 75 * MINUTE, reloadedAt);
+
+    expect(restored.clamped).toBe(false);
+    expect(remainingMs(restored.state, reloadedAt)).toBe(15 * MINUTE);
   });
 });
