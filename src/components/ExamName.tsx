@@ -1,36 +1,53 @@
-import type { ReactElement } from "react";
-import { Monitor } from "lucide-react";
+import type { ReactElement } from 'react';
+import { Monitor } from 'lucide-react';
+import { twMerge } from 'tailwind-merge';
 
 type ExamNameProps = {
-  name: string;
-  /** Whether to mark the name as a digital sitting of an otherwise paper exam. */
-  digital: boolean;
-  /** Balances the trailing mark with an invisible one so the name stays centred. */
-  centred: boolean;
+    name: string;
+    /** Whether to mark the name as a digital sitting of an otherwise paper exam. */
+    digital: boolean;
+    /** Balances the trailing badge with an invisible one so the name stays centred. */
+    centred: boolean;
 };
 
-// overflow-hidden keeps the badge's baseline at its bottom edge, which is what
-// lines it up with the text in both the tab strip and the board.
-const MARK_CLASSES =
-  "inline-flex h-[0.72em] w-[0.72em] items-center justify-center overflow-hidden rounded-full bg-vlec-red-700 align-baseline text-white";
+type DigitalBadgeProps = {
+    /** Renders the badge as an invisible spacer on the name's other side. */
+    balancing?: boolean;
+    className?: string;
+};
 
-const MARK_TRAILING_CLASSES = "ml-[0.3em]";
-
-const MARK_BALANCE_CLASSES = "mr-[0.3em] invisible";
-
-const MARK_ICON_CLASSES = "h-[0.5em] w-[0.5em]";
+/**
+ * The dot marking a digital sitting.
+ *
+ * overflow-hidden keeps the badge's baseline at its bottom edge, which is what
+ * lines it up with the text in both the tab strip and the board.
+ */
+function DigitalBadge({ balancing = false, className }: DigitalBadgeProps): ReactElement {
+    return (
+        <span
+            className={twMerge(
+                'bg-vlec-red-700 inline-flex size-[0.72em] items-center justify-center overflow-hidden rounded-full align-baseline text-white',
+                balancing ? 'invisible mr-[0.3em]' : 'ml-[0.3em]',
+                className,
+            )}
+            role={balancing ? undefined : 'img'}
+            aria-label={balancing ? undefined : 'Digital'}
+            aria-hidden={balancing ? true : undefined}
+        >
+            {!balancing && <Monitor className="size-[0.5em]" strokeWidth={2.25} aria-hidden="true" />}
+        </span>
+    );
+}
 
 export function ExamName({ name, digital, centred }: ExamNameProps): ReactElement {
-  if (!digital) {
-    return <>{name}</>;
-  }
-  return (
-    <>
-      {centred && <span className={`${MARK_CLASSES} ${MARK_BALANCE_CLASSES}`} aria-hidden="true" />}
-      {name}
-      <span className={`${MARK_CLASSES} ${MARK_TRAILING_CLASSES}`} role="img" aria-label="Digital">
-        <Monitor className={MARK_ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-      </span>
-    </>
-  );
+    if (!digital) {
+        return <>{name}</>;
+    }
+    return (
+        <>
+            {centred && <DigitalBadge balancing />}
+            {name}
+            <DigitalBadge />
+        </>
+    );
 }

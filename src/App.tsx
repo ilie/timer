@@ -1,62 +1,57 @@
-import { useState } from "react";
-import Header from "./components/UI/Header";
-import Footer from "./components/UI/Footer";
-import { Board } from "./components/Board";
-import { ClockAlert } from "./components/ClockAlert";
-import { BoardSettingsDialog } from "./components/BoardSettingsDialog";
-import { SessionDialog } from "./components/SessionDialog";
-import type { SessionDialogTarget } from "./components/SessionDialog";
-import { useClockJump } from "./hooks/useClockJump";
-
-const APP_CLASSES =
-  "flex h-screen flex-col overflow-hidden bg-white text-linguaskill-slate-900";
-
-const MAIN_CLASSES = "flex min-h-0 flex-1 flex-col pb-1 pt-2";
+import { useState } from 'react';
+import Header from './components/UI/Header';
+import Footer from './components/UI/Footer';
+import { Board } from './components/Board';
+import { ClockAlert } from './components/ClockAlert';
+import { BoardSettingsDialog } from './components/BoardSettingsDialog';
+import { SessionDialog } from './components/SessionDialog';
+import type { SessionDialogTarget } from './components/SessionDialog';
+import { useClockJump } from './hooks/useClockJump';
 
 function App() {
-  const [sessionDialogTarget, setSessionDialogTarget] = useState<SessionDialogTarget | null>(null);
-  const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
+    const [sessionDialogTarget, setSessionDialogTarget] = useState<SessionDialogTarget | null>(null);
+    const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
 
-  useClockJump();
+    useClockJump();
 
-  function handleAddSession() {
-    setSessionDialogTarget({ kind: "add" });
-  }
+    function showAddSessionDialog() {
+        setSessionDialogTarget({ kind: 'add' });
+    }
 
-  function handleEditSession(sessionId: string) {
-    setSessionDialogTarget({ kind: "edit", sessionId });
-  }
+    function showEditSessionDialog(sessionId: string) {
+        setSessionDialogTarget({ kind: 'edit', sessionId });
+    }
 
-  function handleCloseSessionDialog() {
-    setSessionDialogTarget(null);
-  }
+    function closeSessionDialog() {
+        setSessionDialogTarget(null);
+    }
 
-  function handleOpenBoardSettings() {
-    setBoardSettingsOpen(true);
-  }
+    function showBoardSettings() {
+        setBoardSettingsOpen(true);
+    }
 
-  function handleCloseBoardSettings() {
-    setBoardSettingsOpen(false);
-  }
+    function closeBoardSettings() {
+        setBoardSettingsOpen(false);
+    }
 
-  return (
-    <div className={APP_CLASSES}>
-      <Header />
-      <main className={MAIN_CLASSES}>
-        <ClockAlert />
-        <Board
-          onAddSession={handleAddSession}
-          onEditSession={handleEditSession}
-          onEditCentreNumber={handleOpenBoardSettings}
-        />
-      </main>
-      <Footer />
-      {sessionDialogTarget !== null && (
-        <SessionDialog target={sessionDialogTarget} onClose={handleCloseSessionDialog} />
-      )}
-      {boardSettingsOpen && <BoardSettingsDialog onClose={handleCloseBoardSettings} />}
-    </div>
-  );
+    return (
+        <div className="text-linguaskill-slate-900 flex h-screen flex-col overflow-hidden bg-white">
+            <Header />
+            <main className="flex min-h-0 flex-1 flex-col pt-2 pb-1">
+                <ClockAlert />
+                <Board
+                    onAddSession={showAddSessionDialog}
+                    onEditSession={showEditSessionDialog}
+                    onEditCentreNumber={showBoardSettings}
+                />
+            </main>
+            <Footer />
+            {sessionDialogTarget !== null && (
+                <SessionDialog target={sessionDialogTarget} onClose={closeSessionDialog} />
+            )}
+            {boardSettingsOpen && <BoardSettingsDialog onClose={closeBoardSettings} />}
+        </div>
+    );
 }
 
 export default App;

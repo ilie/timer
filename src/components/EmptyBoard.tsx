@@ -1,28 +1,26 @@
-import type { ReactElement } from "react";
-import { Plus } from "lucide-react";
+import type { ReactElement } from 'react';
+import { Plus } from 'lucide-react';
+import { twMerge } from 'tailwind-merge';
+import { Button } from './UI/Button';
 
 type EmptyBoardProps = {
-  onAddSession: () => void;
+    onAddSession: () => void;
+    className?: string;
 };
 
-const EMPTY_BOARD_CLASSES =
-  "flex h-full flex-col items-center justify-center gap-6 text-linguaskill-slate-500";
-
-const EMPTY_BOARD_TEXT_CLASSES = "text-pretty text-centre-number tracking-[0.16em] uppercase";
-
-const EMPTY_BOARD_BUTTON_CLASSES =
-  "inline-flex items-center gap-3 rounded-full bg-vlec-blue-900 px-8 py-4 text-tab font-medium text-white transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
-
-const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
-
-export function EmptyBoard({ onAddSession }: EmptyBoardProps): ReactElement {
-  return (
-    <div className={EMPTY_BOARD_CLASSES}>
-      <p className={EMPTY_BOARD_TEXT_CLASSES}>No sessions yet</p>
-      <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
-        <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-        Add Session
-      </button>
-    </div>
-  );
+export function EmptyBoard({ onAddSession, className }: EmptyBoardProps): ReactElement {
+    return (
+        <div
+            className={twMerge(
+                'text-linguaskill-slate-500 flex h-full flex-col items-center justify-center gap-6',
+                className,
+            )}
+        >
+            <p className="text-centre-number tracking-[0.16em] text-pretty uppercase">No sessions yet</p>
+            <Button className="text-tab gap-3 rounded-full px-8 py-4" onClick={onAddSession}>
+                <Plus className="size-[1.15em]" strokeWidth={2.25} aria-hidden="true" />
+                Add Session
+            </Button>
+        </div>
+    );
 }

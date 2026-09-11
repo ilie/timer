@@ -1,50 +1,49 @@
-import { useId } from "react";
-import type { ReactElement } from "react";
-import { TriangleAlert } from "lucide-react";
-import { ModalDialog } from "./ModalDialog";
+import { useId } from 'react';
+import type { ReactElement } from 'react';
+import { TriangleAlert } from 'lucide-react';
+import { ModalDialog } from './ModalDialog';
 
 type ConfirmDialogProps = {
-  title: string;
-  message: string;
-  detail: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  onClose: () => void;
+    title: string;
+    message: string;
+    detail: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+    onClose: () => void;
+    className?: string;
 };
 
-const MESSAGE_CLASSES = "text-pretty text-lg text-linguaskill-slate-600";
-
-const DETAIL_CLASSES = "text-pretty text-lg font-medium text-linguaskill-slate-900";
-
 export function ConfirmDialog({
-  title,
-  message,
-  detail,
-  confirmLabel,
-  onConfirm,
-  onClose,
+    title,
+    message,
+    detail,
+    confirmLabel,
+    onConfirm,
+    onClose,
+    className,
 }: ConfirmDialogProps): ReactElement {
-  const messageId = useId();
+    const messageId = useId();
 
-  function handleConfirm(): boolean {
-    onConfirm();
-    return true;
-  }
+    function confirm(): boolean {
+        onConfirm();
+        return true;
+    }
 
-  return (
-    <ModalDialog
-      title={title}
-      titleIcon={TriangleAlert}
-      submitLabel={confirmLabel}
-      describedBy={messageId}
-      destructive
-      onSubmit={handleConfirm}
-      onClose={onClose}
-    >
-      <p id={messageId} className={MESSAGE_CLASSES}>
-        {message}
-      </p>
-      <p className={DETAIL_CLASSES}>{detail}</p>
-    </ModalDialog>
-  );
+    return (
+        <ModalDialog
+            title={title}
+            titleIcon={TriangleAlert}
+            submitLabel={confirmLabel}
+            describedBy={messageId}
+            destructive
+            onSubmit={confirm}
+            onClose={onClose}
+            className={className}
+        >
+            <p id={messageId} className="text-linguaskill-slate-600 text-lg text-pretty">
+                {message}
+            </p>
+            <p className="text-linguaskill-slate-900 text-lg font-medium text-pretty">{detail}</p>
+        </ModalDialog>
+    );
 }

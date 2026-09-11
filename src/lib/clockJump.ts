@@ -1,4 +1,4 @@
-import { CLOCK_JUMP_TOLERANCE_MS } from "../config/timing";
+import { CLOCK_JUMP_TOLERANCE_MS } from '../config/timing';
 
 /**
  * What a pair of clock readings tells us about the system clock.
@@ -9,20 +9,17 @@ import { CLOCK_JUMP_TOLERANCE_MS } from "../config/timing";
  * - `unverified` — they disagree, but we cannot tell whether the wall clock
  *                 moved or real time passed while we were not running.
  */
-export type ClockJump =
-  | { kind: "none" }
-  | { kind: "stepped"; skewMs: number }
-  | { kind: "unverified"; skewMs: number };
+export type ClockJump = { kind: 'none' } | { kind: 'stepped'; skewMs: number } | { kind: 'unverified'; skewMs: number };
 
 export type ClockSample = {
-  prevDate: number;
-  prevPerf: number;
-  nowDate: number;
-  nowPerf: number;
-  /** How long the sampler intended to wait between these two readings. */
-  expectedMs: number;
-  /** False if the page was hidden or frozen at any point between the readings. */
-  pageStayedVisible: boolean;
+    prevDate: number;
+    prevPerf: number;
+    nowDate: number;
+    nowPerf: number;
+    /** How long the sampler intended to wait between these two readings. */
+    expectedMs: number;
+    /** False if the page was hidden or frozen at any point between the readings. */
+    pageStayedVisible: boolean;
 };
 
 /**
@@ -56,23 +53,20 @@ const SAMPLER_LATE_FACTOR = 1.5;
  * two clocks agree and we report `none`. Both are correct.
  */
 export const classifyClockJump = ({
-  prevDate,
-  prevPerf,
-  nowDate,
-  nowPerf,
-  expectedMs,
-  pageStayedVisible,
+    prevDate,
+    prevPerf,
+    nowDate,
+    nowPerf,
+    expectedMs,
+    pageStayedVisible,
 }: ClockSample): ClockJump => {
-  const wallClockElapsed = nowDate - prevDate;
-  const monotonicElapsed = nowPerf - prevPerf;
-  const skewMs = wallClockElapsed - monotonicElapsed;
-  if (Math.abs(skewMs) <= CLOCK_JUMP_TOLERANCE_MS) {
-    return { kind: "none" };
-  }
-  const samplerRanOnSchedule =
-    monotonicElapsed >= expectedMs * SAMPLER_EARLY_FACTOR &&
-    monotonicElapsed <= expectedMs * SAMPLER_LATE_FACTOR;
-  return samplerRanOnSchedule && pageStayedVisible
-    ? { kind: "stepped", skewMs }
-    : { kind: "unverified", skewMs };
+    const wallClockElapsed = nowDate - prevDate;
+    const monotonicElapsed = nowPerf - prevPerf;
+    const skewMs = wallClockElapsed - monotonicElapsed;
+    if (Math.abs(skewMs) <= CLOCK_JUMP_TOLERANCE_MS) {
+        return { kind: 'none' };
+    }
+    const samplerRanOnSchedule =
+        monotonicElapsed >= expectedMs * SAMPLER_EARLY_FACTOR && monotonicElapsed <= expectedMs * SAMPLER_LATE_FACTOR;
+    return samplerRanOnSchedule && pageStayedVisible ? { kind: 'stepped', skewMs } : { kind: 'unverified', skewMs };
 };

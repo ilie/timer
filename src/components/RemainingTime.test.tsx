@@ -1,202 +1,178 @@
-import { render, screen } from "@testing-library/react";
-import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RemainingTime } from "./RemainingTime";
-import { STORAGE_KEY } from "../config/storage";
-import { formatRemaining } from "../lib/format";
-import { remainingMs } from "../lib/timer";
-import type { TimerState } from "../lib/timer";
-import { getSnapshot, hydrateFromStorage, startSession } from "../store/boardStore";
+import { render, screen } from '@testing-library/react';
+import { act } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RemainingTime } from './RemainingTime';
+import { STORAGE_KEY } from '../config/storage';
+import { formatRemaining } from '../lib/format';
+import { remainingMs } from '../lib/timer';
+import type { TimerState } from '../lib/timer';
+import { getSnapshot, hydrateFromStorage, startSession } from '../store/boardStore';
 
-const EXAM_START = new Date("2026-06-11T09:00:00.000Z");
+const EXAM_START = new Date('2026-06-11T09:00:00.000Z');
 const READING_MS = 75 * 60_000;
 const TEN_MINUTES_MS = 10 * 60_000;
 
 const seedIdleReadingSession = (): void => {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      centreNumber: "ES432",
-      sessions: [
-        {
-          id: "reading",
-          examName: "B2 First",
-          partIndex: 0,
-          mode: "paper",
-          extraMinutes: 0,
-          timer: { status: "idle" },
-        },
-      ],
-      break: { timer: { status: "idle" }, minutes: 15 },
-    }),
-  );
-  hydrateFromStorage();
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+            centreNumber: 'ES432',
+            sessions: [
+                {
+                    id: 'reading',
+                    examName: 'B2 First',
+                    partIndex: 0,
+                    mode: 'paper',
+                    extraMinutes: 0,
+                    timer: { status: 'idle' },
+                },
+            ],
+            break: { timer: { status: 'idle' }, minutes: 15 },
+        }),
+    );
+    hydrateFromStorage();
 };
 
 const runningTimerOf = (id: string): TimerState => {
-  const timer = getSnapshot().sessions.find((session) => session.id === id)?.timer;
-  if (timer === undefined) {
-    throw new Error(`No session ${id}`);
-  }
-  return timer;
+    const timer = getSnapshot().sessions.find((session) => session.id === id)?.timer;
+    if (timer === undefined) {
+        throw new Error(`No session ${id}`);
+    }
+    return timer;
 };
 
 const advance = (ms: number): void => {
-  act(() => {
-    vi.advanceTimersByTime(ms);
-  });
+    act(() => {
+        vi.advanceTimersByTime(ms);
+    });
 };
 
 const renderedRemaining = (): string => {
-  const value = screen.getByRole("timer").textContent;
-  if (value === null) {
-    throw new Error("No countdown rendered");
-  }
-  return value;
+    const value = screen.getByRole('timer').textContent;
+    if (value === null) {
+        throw new Error('No countdown rendered');
+    }
+    return value;
 };
 
 const reservedRenderings = (): string[] =>
-  [...document.querySelectorAll("[data-reservation]")].map((node) => node.textContent ?? "");
+    [...document.querySelectorAll('[data-reservation]')].map((node) => node.textContent ?? '');
 
 beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(EXAM_START);
-  localStorage.clear();
-  hydrateFromStorage();
+    vi.useFakeTimers();
+    vi.setSystemTime(EXAM_START);
+    localStorage.clear();
+    hydrateFromStorage();
 });
 
 afterEach(() => {
-  vi.useRealTimers();
-  localStorage.clear();
+    vi.useRealTimers();
+    localStorage.clear();
 });
 
-describe("anchoring", () => {
-  it("anchors the end time exactly one duration after the start", () => {
-    seedIdleReadingSession();
-    startSession("reading");
-    const timer = runningTimerOf("reading");
+describe('anchoring', () => {
+    it('anchors the end time exactly one duration after the start', () => {
+        seedIdleReadingSession();
+        startSession('reading');
+        const timer = runningTimerOf('reading');
 
-    expect(timer.status).toBe("running");
-    expect(timer.status === "running" && timer.endsAt - Date.now()).toBe(READING_MS);
-  });
+        expect(timer.status).toBe('running');
+        expect(timer.status === 'running' && timer.endsAt - Date.now()).toBe(READING_MS);
+    });
 
-  it("loses nothing to drift over ten minutes of ticks", () => {
-    seedIdleReadingSession();
-    startSession("reading");
-    const timer = runningTimerOf("reading");
+    it('loses nothing to drift over ten minutes of ticks', () => {
+        seedIdleReadingSession();
+        startSession('reading');
+        const timer = runningTimerOf('reading');
 
-    render(
-      <RemainingTime
-        label={null}
-        timer={timer}
-        durationMs={READING_MS}
-      />,
-    );
+        render(<RemainingTime label={null} timer={timer} durationMs={READING_MS} />);
 
-    advance(TEN_MINUTES_MS);
+        advance(TEN_MINUTES_MS);
 
-    expect(remainingMs(timer, Date.now())).toBe(READING_MS - 600_000);
-    expect(renderedRemaining()).toBe(formatRemaining(READING_MS - 600_000));
-  });
+        expect(remainingMs(timer, Date.now())).toBe(READING_MS - 600_000);
+        expect(renderedRemaining()).toBe(formatRemaining(READING_MS - 600_000));
+    });
 
-  it("shows the whole allowed time while the session is idle", () => {
-    render(
-      <RemainingTime
-        label={null}
-        timer={{ status: "idle" }}
-        durationMs={READING_MS}
-      />,
-    );
+    it('shows the whole allowed time while the session is idle', () => {
+        render(<RemainingTime label={null} timer={{ status: 'idle' }} durationMs={READING_MS} />);
 
-    expect(renderedRemaining()).toBe(formatRemaining(READING_MS));
-  });
+        expect(renderedRemaining()).toBe(formatRemaining(READING_MS));
+    });
 });
 
-describe("width reservation", () => {
-  it("reserves the same renderings whatever the value shows", () => {
-    const durationMs = 90 * 60_000;
-    const values = [durationMs, 600_000, 582_000, 0];
-    const reservations = values.map((remaining) => {
-      const view = render(
-        <RemainingTime
-          label={null}
-          timer={{ status: "running", endsAt: Date.now() + remaining }}
-          durationMs={durationMs}
-        />,
-      );
-      const reserved = reservedRenderings();
-      view.unmount();
-      return reserved;
+describe('width reservation', () => {
+    it('reserves the same renderings whatever the value shows', () => {
+        const durationMs = 90 * 60_000;
+        const values = [durationMs, 600_000, 582_000, 0];
+        const reservations = values.map((remaining) => {
+            const view = render(
+                <RemainingTime
+                    label={null}
+                    timer={{ status: 'running', endsAt: Date.now() + remaining }}
+                    durationMs={durationMs}
+                />,
+            );
+            const reserved = reservedRenderings();
+            view.unmount();
+            return reserved;
+        });
+
+        expect(reservations[0]).toContain('1h 10min 00sec');
+        for (const reserved of reservations) {
+            expect(reserved).toEqual(reservations[0]);
+        }
     });
 
-    expect(reservations[0]).toContain("1h 10min 00sec");
-    for (const reserved of reservations) {
-      expect(reserved).toEqual(reservations[0]);
-    }
-  });
+    it('marks each threshold on the countdown cell', () => {
+        const durationMs = 20 * 60_000;
+        const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
+            const view = render(
+                <RemainingTime
+                    label={null}
+                    timer={{ status: 'running', endsAt: Date.now() + remaining }}
+                    durationMs={durationMs}
+                />,
+            );
+            const state = document.querySelector('[data-state]')?.getAttribute('data-state');
+            view.unmount();
+            return state;
+        });
 
-  it("marks each threshold on the countdown cell", () => {
-    const durationMs = 20 * 60_000;
-    const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
-      const view = render(
-        <RemainingTime
-          label={null}
-          timer={{ status: "running", endsAt: Date.now() + remaining }}
-          durationMs={durationMs}
-        />,
-      );
-      const state = document.querySelector("[data-state]")?.getAttribute("data-state");
-      view.unmount();
-      return state;
+        expect(states).toEqual(['normal', 'warning', 'critical', 'zero']);
+        expect(formatRemaining(0)).toBe('0min 00sec');
     });
-
-    expect(states).toEqual(["normal", "warning", "critical", "zero"]);
-    expect(formatRemaining(0)).toBe("0min 00sec");
-  });
 });
 
-describe("never counting upward", () => {
-  it("never shows more than the allowed time when a stale sample meets a fresh start", () => {
-    seedIdleReadingSession();
-    const view = render(
-      <RemainingTime
-        label={null}
-        timer={{ status: "idle" }}
-        durationMs={READING_MS}
-      />,
-    );
+describe('never counting upward', () => {
+    it('never shows more than the allowed time when a stale sample meets a fresh start', () => {
+        seedIdleReadingSession();
+        const view = render(<RemainingTime label={null} timer={{ status: 'idle' }} durationMs={READING_MS} />);
 
-    expect(renderedRemaining()).toBe("1h 15min 00sec");
+        expect(renderedRemaining()).toBe('1h 15min 00sec');
 
-    act(() => {
-      vi.setSystemTime(EXAM_START.getTime() + 200);
+        act(() => {
+            vi.setSystemTime(EXAM_START.getTime() + 200);
+        });
+        startSession('reading');
+        const started = runningTimerOf('reading');
+
+        view.rerender(<RemainingTime label={null} timer={started} durationMs={READING_MS} />);
+
+        expect(renderedRemaining()).toBe('1h 15min 00sec');
     });
-    startSession("reading");
-    const started = runningTimerOf("reading");
 
-    view.rerender(
-      <RemainingTime
-        label={null}
-        timer={started}
-        durationMs={READING_MS}
-      />,
-    );
+    it('never ticks upward across a run', () => {
+        const durationMs = 12 * 60_000;
+        const timer: TimerState = { status: 'running', endsAt: Date.now() + durationMs };
+        render(<RemainingTime label={null} timer={timer} durationMs={durationMs} />);
 
-    expect(renderedRemaining()).toBe("1h 15min 00sec");
-  });
-
-  it("never ticks upward across a run", () => {
-    const durationMs = 12 * 60_000;
-    const timer: TimerState = { status: "running", endsAt: Date.now() + durationMs };
-    render(<RemainingTime label={null} timer={timer} durationMs={durationMs} />);
-
-    let previous = remainingMs(timer, Date.now());
-    for (let step = 0; step < 4 * 60; step += 1) {
-      advance(250);
-      const current = remainingMs(timer, Date.now());
-      expect(current).toBeLessThanOrEqual(previous);
-      previous = current;
-      expect(renderedRemaining()).toBe(formatRemaining(Math.min(current, durationMs)));
-    }
-  });
+        let previous = remainingMs(timer, Date.now());
+        for (let step = 0; step < 4 * 60; step += 1) {
+            advance(250);
+            const current = remainingMs(timer, Date.now());
+            expect(current).toBeLessThanOrEqual(previous);
+            previous = current;
+            expect(renderedRemaining()).toBe(formatRemaining(Math.min(current, durationMs)));
+        }
+    });
 });
