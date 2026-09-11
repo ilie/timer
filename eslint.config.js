@@ -9,4 +9,8 @@ export default tseslint.config(
         files: ['src/**/*.{ts,tsx}', 'vite.config.ts'],
         extends: [...tseslint.configs.recommended, reactHooks.configs.flat.recommended],
     },
+    {
+        files: ['public/service-worker.js'],
+        extends: [...tseslint.configs.recommended],
+    },
 );
