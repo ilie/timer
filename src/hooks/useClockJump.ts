@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { CLOCK_JUMP_SAMPLE_MS } from "../config/timing";
-import { classifyClockJump } from "../lib/timer";
+import { classifyClockJump } from "../lib/clockJump";
 import { applyClockStep, reportUnverifiedClockJump } from "../store/boardStore";
 
 /**

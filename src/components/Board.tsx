@@ -1,18 +1,20 @@
 import { useRef, useState, useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { BoardGrid } from "./BoardGrid";
-import { ConfirmDialog } from "./ConfirmDialog";
+import { EmptyBoard } from "./EmptyBoard";
+import { PendingActionDialog, pendingActionFor } from "./PendingActionDialog";
+import type { PendingAction } from "./PendingActionDialog";
 import { rowHeights, useBoardScale } from "../hooks/useBoardScale";
 import type { BoardScaleLayout } from "../hooks/useBoardScale";
 import { useUnloadGuard } from "../hooks/useUnloadGuard";
-import { densityFor, formatRemaining } from "../lib/format";
+import { densityFor } from "../lib/format";
 import { describeSession } from "../lib/sessionView";
 import type { SessionView } from "../lib/sessionView";
-import { remainingMs } from "../lib/timer";
 import {
   getClockSnapshot,
   getSnapshot,
+  moveSession,
   removeSession,
   resetSession,
   subscribe,
@@ -24,43 +26,6 @@ type BoardProps = {
   onEditCentreNumber: () => void;
 };
 
-type EmptyBoardProps = {
-  onAddSession: () => void;
-};
-
-type PendingActionKind = "remove" | "reset";
-
-/** A destructive request held back until the invigilator confirms it. */
-type PendingAction = {
-  kind: PendingActionKind;
-  sessionId: string;
-  examLabel: string;
-  partName: string;
-  remaining: string;
-};
-
-type PendingActionDialogProps = {
-  action: PendingAction;
-  onConfirm: () => void;
-  onClose: () => void;
-};
-
-const CONFIRMATIONS: Record<
-  PendingActionKind,
-  { title: string; message: string; confirmLabel: string }
-> = {
-  remove: {
-    title: "Close This Session?",
-    message: "Closing removes the column and its countdown from the board.",
-    confirmLabel: "Close Session",
-  },
-  reset: {
-    title: "Reset This Countdown?",
-    message: "Resetting returns the countdown to the full allowed time.",
-    confirmLabel: "Reset Countdown",
-  },
-};
-
 const BOARD_CLASSES = "flex h-full min-h-0 w-full flex-col";
 
 const CENTRE_NUMBER_CLASSES =
@@ -70,65 +35,9 @@ const CENTRE_NUMBER_VALUE_CLASSES = "font-semibold text-vlec-blue-900";
 
 const CENTRE_NUMBER_ICON_CLASSES = "h-[0.75em] w-[0.75em] shrink-0 self-center";
 
-const EMPTY_BOARD_CLASSES =
-  "flex h-full flex-col items-center justify-center gap-8 text-center text-linguaskill-slate-400";
-
-const EMPTY_BOARD_TEXT_CLASSES = "text-pretty text-centre-number tracking-[0.16em] uppercase";
-
-const EMPTY_BOARD_BUTTON_CLASSES =
-  "inline-flex items-center gap-3 rounded-full bg-vlec-blue-900 px-8 py-4 text-tab font-medium text-white transition-colors hover:bg-vlec-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-vlec-blue-900";
-
-const ICON_CLASSES = "h-[1.15em] w-[1.15em]";
-
 const SUPPORTING_ROWS = 3;
 
 const COUNTDOWN_ROWS = 4;
-
-/** What the countdown reads when the action is taken, for the confirmation to quote. */
-function pendingActionFor(kind: PendingActionKind, view: SessionView): PendingAction {
-  const remaining =
-    view.timer.status === "idle"
-      ? view.durationMs
-      : Math.max(0, Math.min(remainingMs(view.timer, Date.now()), view.durationMs));
-  return {
-    kind,
-    sessionId: view.id,
-    examLabel: view.examLabel,
-    partName: view.partName,
-    remaining: formatRemaining(remaining),
-  };
-}
-
-function EmptyBoard({ onAddSession }: EmptyBoardProps): ReactElement {
-  return (
-    <div className={EMPTY_BOARD_CLASSES}>
-      <p className={EMPTY_BOARD_TEXT_CLASSES}>No sessions yet</p>
-      <button className={EMPTY_BOARD_BUTTON_CLASSES} type="button" onClick={onAddSession}>
-        <Plus className={ICON_CLASSES} strokeWidth={2.25} aria-hidden="true" />
-        Add Session
-      </button>
-    </div>
-  );
-}
-
-function PendingActionDialog({
-  action,
-  onConfirm,
-  onClose,
-}: PendingActionDialogProps): ReactElement {
-  const { title, message, confirmLabel } = CONFIRMATIONS[action.kind];
-
-  return (
-    <ConfirmDialog
-      title={title}
-      message={message}
-      detail={`${action.examLabel} — ${action.partName} still has ${action.remaining} left.`}
-      confirmLabel={confirmLabel}
-      onConfirm={onConfirm}
-      onClose={onClose}
-    />
-  );
-}
 
 export function Board({
   onAddSession,
@@ -229,6 +138,7 @@ export function Board({
           onEditSession={onEditSession}
           onRequestRemove={handleRemoveRequest}
           onRequestReset={handleResetRequest}
+          onMoveSession={moveSession}
           regionRef={regionRef}
           tabStripRef={tabStripRef}
         />

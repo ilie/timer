@@ -7,6 +7,7 @@ import {
   applyClockStep,
   getSnapshot,
   hydrateFromStorage,
+  moveSession,
   pauseSession,
   removeSession,
   sessionDurationMs,
@@ -653,5 +654,67 @@ describe("compensating for a system clock step", () => {
     applyClockStep(-60 * 60_000);
 
     expect(getSnapshot().clockJumpDetected).toBe(false);
+  });
+});
+
+describe("reordering the columns", () => {
+  const three = ["a", "b", "c"].map((id) => ({ ...idleSession, id }));
+
+  const order = (): string[] => getSnapshot().sessions.map((session) => session.id);
+
+  it("moves a session to a later position", () => {
+    seed(three);
+
+    moveSession("a", 2);
+
+    expect(order()).toEqual(["b", "c", "a"]);
+  });
+
+  it("moves a session to an earlier position", () => {
+    seed(three);
+
+    moveSession("c", 0);
+
+    expect(order()).toEqual(["c", "a", "b"]);
+  });
+
+  it("keeps a running timer untouched as its column moves", () => {
+    seed(three);
+    startSession("a");
+    const before = timerOf("a");
+
+    moveSession("a", 2);
+
+    expect(timerOf("a")).toEqual(before);
+  });
+
+  it("persists the new order", () => {
+    seed(three);
+
+    moveSession("a", 2);
+    hydrateFromStorage();
+
+    expect(order()).toEqual(["b", "c", "a"]);
+  });
+
+  it("clamps a target beyond either end", () => {
+    seed(three);
+
+    moveSession("b", 99);
+    expect(order()).toEqual(["a", "c", "b"]);
+
+    moveSession("b", -5);
+    expect(order()).toEqual(["b", "a", "c"]);
+  });
+
+  it("does nothing for an unknown session or a move to its own place", () => {
+    seed(three);
+    const revision = getSnapshot().revision;
+
+    moveSession("nope", 0);
+    moveSession("b", 1);
+
+    expect(order()).toEqual(["a", "b", "c"]);
+    expect(getSnapshot().revision).toBe(revision);
   });
 });

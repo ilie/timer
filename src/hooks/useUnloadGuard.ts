@@ -6,8 +6,8 @@ export function useUnloadGuard(active: boolean): void {
       return;
     }
     const warnBeforeUnload = (event: BeforeUnloadEvent): void => {
+      // preventDefault is the whole modern contract; returnValue is deprecated.
       event.preventDefault();
-      event.returnValue = true;
     };
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => {

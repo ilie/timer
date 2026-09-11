@@ -1,6 +1,6 @@
 import { examByName } from "../config/exams";
-import { sessionDurationMs } from "../store/boardStore";
-import type { Session } from "../store/boardStore";
+import { sessionDurationMs } from "../store/session";
+import type { Session } from "../store/session";
 import {
   composeExamLabel,
   examDisplayName,

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { classifyClockJump } from "./clockJump";
 import {
-  classifyClockJump,
   extend,
   pause,
   reanchor,
