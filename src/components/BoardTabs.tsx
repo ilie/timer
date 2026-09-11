@@ -1,10 +1,10 @@
+import { twMerge } from 'tailwind-merge';
 import { useState } from 'react';
 import type { ReactElement, Ref } from 'react';
 import { Plus } from 'lucide-react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { SessionTab } from './SessionTab';
-import { MAX_SESSIONS } from '../config/board';
+import { maxSessions } from '../config/board';
 import type { SessionView } from '../lib/sessionView';
 
 type BoardTabsProps = {
@@ -33,7 +33,7 @@ export function BoardTabs({
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
     return (
-        <thead ref={ref} className={mergeClasses('bg-vlec-blue-50', className)}>
+        <thead ref={ref} className={twMerge('bg-vlec-blue-50', className)}>
             <tr>
                 {labelLaneVisible ? null : <td className="p-0"></td>}
                 {columns.map((column, index) => (
@@ -57,10 +57,10 @@ export function BoardTabs({
                             {index === columns.length - 1 && (
                                 <Button
                                     variant="quiet"
-                                    className="text-tab hover:bg-linguaskill-slate-200 focus-visible:outline-vlec-blue-700 disabled:text-linguaskill-slate-300 mr-4 mb-1 ml-auto rounded-full p-1.5 disabled:cursor-not-allowed disabled:bg-transparent"
+                                    className="hover:bg-linguaskill-slate-200 focus-visible:outline-vlec-blue-700 disabled:text-linguaskill-slate-300 tab-text mr-4 mb-1 ml-auto rounded-full p-1.5 disabled:cursor-not-allowed disabled:bg-transparent"
                                     aria-label="Add Session"
                                     onClick={onAddSession}
-                                    disabled={columns.length >= MAX_SESSIONS}
+                                    disabled={columns.length >= maxSessions}
                                 >
                                     <Plus className="size-[1.15em]" strokeWidth={2.25} aria-hidden="true" />
                                 </Button>

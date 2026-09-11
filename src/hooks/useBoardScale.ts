@@ -2,7 +2,6 @@ import { useEffect, useEffectEvent, useLayoutEffect } from 'react';
 import type { RefObject } from 'react';
 
 export type BoardScaleLayout = {
-    columns: number;
     valueRows: number;
     hasControlsRow: boolean;
     labelLane: boolean;
@@ -21,32 +20,34 @@ type FitItem = {
     height: number;
 };
 
-const VALUE_SIZE_PROPERTY = '--board-value-size';
+const valueSizeProperty = '--board-value-size';
 
-const LABEL_LANE_PROPERTY = '--board-label-lane';
+const labelLaneProperty = '--board-label-lane';
 
-const FIT_SELECTOR = '[data-fit]';
+const fitSelector = '[data-fit]';
 
-const LABEL_LANE = 'label';
+const labelLaneName = 'label';
 
-const BASIS_PX = 100;
+const valueLaneName = 'value';
 
-const MIN_VALUE_PX = 14;
+const basisPixels = 100;
 
-const MAX_VALUE_PX = 320;
+const minValuePixels = 14;
 
-const WIDTH_SAFETY = 0.995;
+const maxValuePixels = 320;
 
-const HEIGHT_SAFETY = 0.96;
+const widthSafety = 0.995;
 
-const NARROWEST_LABEL_LANE = 0.15;
+const heightSafety = 0.96;
 
-const WIDEST_LABEL_LANE = 0.45;
+const narrowestLabelLane = 0.15;
 
-const CONTROLS_ROW_WEIGHT = 0.55;
+const widestLabelLane = 0.45;
+
+const controlsRowWeight = 0.55;
 
 function totalRowWeight(layout: BoardScaleLayout): number {
-    return layout.valueRows + (layout.hasControlsRow ? CONTROLS_ROW_WEIGHT : 0);
+    return layout.valueRows + (layout.hasControlsRow ? controlsRowWeight : 0);
 }
 
 function widestIn(items: readonly FitItem[], lane: string): number {
@@ -59,20 +60,17 @@ function contentWidthOf(cell: HTMLElement): number {
 }
 
 function labelLaneFractionFor(items: readonly FitItem[]): number {
-    const labels = widestIn(items, LABEL_LANE);
-    const values = items.reduce(
-        (widest, item) => (item.lane === LABEL_LANE ? widest : Math.max(widest, item.width)),
-        0,
-    );
+    const labels = widestIn(items, labelLaneName);
+    const values = widestIn(items, valueLaneName);
     if (labels + values === 0) {
-        return NARROWEST_LABEL_LANE;
+        return narrowestLabelLane;
     }
-    return Math.min(WIDEST_LABEL_LANE, Math.max(NARROWEST_LABEL_LANE, labels / (labels + values)));
+    return Math.min(widestLabelLane, Math.max(narrowestLabelLane, labels / (labels + values)));
 }
 
 function measure(board: HTMLElement): FitItem[] {
     const items: FitItem[] = [];
-    for (const element of board.querySelectorAll<HTMLElement>(FIT_SELECTOR)) {
+    for (const element of board.querySelectorAll<HTMLElement>(fitSelector)) {
         const cell = element.closest<HTMLElement>('td, th');
         const box = element.getBoundingClientRect();
         if (cell !== null && box.width > 0 && box.height > 0) {
@@ -86,7 +84,7 @@ export function rowHeights(layout: BoardScaleLayout): RowHeights {
     const total = totalRowWeight(layout);
     return {
         value: `${(100 / total).toFixed(4)}%`,
-        controls: `${((100 * CONTROLS_ROW_WEIGHT) / total).toFixed(4)}%`,
+        controls: `${((100 * controlsRowWeight) / total).toFixed(4)}%`,
     };
 }
 
@@ -109,29 +107,29 @@ export function useBoardScale(
         const regionBox = region.getBoundingClientRect();
         const tabStripHeight = tabStripRef.current?.getBoundingClientRect().height ?? 0;
         const rowsHeight = regionBox.height - tabStripHeight;
-        if (regionBox.width === 0 || rowsHeight <= 0 || layout.columns === 0) {
+        if (regionBox.width === 0 || rowsHeight <= 0) {
             return;
         }
 
-        board.style.setProperty(VALUE_SIZE_PROPERTY, `${BASIS_PX}px`);
+        board.style.setProperty(valueSizeProperty, `${basisPixels}px`);
         const items = measure(board);
 
         const labelLaneFraction = layout.labelLane ? labelLaneFractionFor(items) : 0;
-        board.style.setProperty(LABEL_LANE_PROPERTY, `${(labelLaneFraction * 100).toFixed(3)}%`);
+        board.style.setProperty(labelLaneProperty, `${(labelLaneFraction * 100).toFixed(3)}%`);
 
-        const valueRowHeight = (rowsHeight / totalRowWeight(layout)) * HEIGHT_SAFETY;
+        const valueRowHeight = (rowsHeight / totalRowWeight(layout)) * heightSafety;
 
-        let smallest = MAX_VALUE_PX;
+        let smallest = maxValuePixels;
         for (const item of items) {
-            const available = contentWidthOf(item.cell) * WIDTH_SAFETY;
+            const available = contentWidthOf(item.cell) * widthSafety;
             smallest = Math.min(
                 smallest,
-                (available * BASIS_PX) / item.width,
-                (valueRowHeight * BASIS_PX) / item.height,
+                (available * basisPixels) / item.width,
+                (valueRowHeight * basisPixels) / item.height,
             );
         }
-        const fitted = Math.max(MIN_VALUE_PX, Math.min(MAX_VALUE_PX, Math.floor(smallest)));
-        board.style.setProperty(VALUE_SIZE_PROPERTY, `${fitted}px`);
+        const fitted = Math.max(minValuePixels, Math.min(maxValuePixels, Math.floor(smallest)));
+        board.style.setProperty(valueSizeProperty, `${fitted}px`);
     });
 
     // Re-fit after every render: any change to the board's contents can change what fits.

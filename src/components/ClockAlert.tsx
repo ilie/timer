@@ -1,7 +1,7 @@
+import { twMerge } from 'tailwind-merge';
 import type { ReactElement } from 'react';
 import { useSyncExternalStore } from 'react';
 import { TriangleAlert, X } from 'lucide-react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { formatClockSkew } from '../lib/format';
 import { getSnapshot, setClockJumpDetected, subscribe } from '../store/boardStore';
@@ -10,16 +10,16 @@ function dismiss(): void {
     setClockJumpDetected(false);
 }
 
+type ClockAlertProps = {
+    className?: string;
+};
+
 /**
  * Tells the invigilator that the system clock moved under a running exam.
  *
  * Detecting the jump is only half the job: whether or not the countdowns could
  * be corrected automatically, somebody in the room has to know it happened.
  */
-type ClockAlertProps = {
-    className?: string;
-};
-
 export function ClockAlert({ className }: ClockAlertProps): ReactElement | null {
     const board = useSyncExternalStore(subscribe, getSnapshot);
 
@@ -28,13 +28,13 @@ export function ClockAlert({ className }: ClockAlertProps): ReactElement | null 
     }
 
     const timesPreserved = board.clockTimesPreserved;
-    const skew = board.clockSkewMs === 0 ? null : formatClockSkew(board.clockSkewMs);
+    const skew = board.clockSkewMilliseconds === 0 ? null : formatClockSkew(board.clockSkewMilliseconds);
 
     return (
         <div
             role="alert"
-            className={mergeClasses(
-                'text-tab mx-8 mb-2 flex shrink-0 items-center gap-3 rounded-lg border-2 px-5 py-3',
+            className={twMerge(
+                'tab-text mx-8 mb-2 flex shrink-0 items-center gap-3 rounded-lg border-2 px-5 py-3',
                 timesPreserved
                     ? 'border-amber-700 bg-amber-50 text-amber-900'
                     : 'border-vlec-red-700 bg-vlec-red-50 text-vlec-red-900',
@@ -43,8 +43,13 @@ export function ClockAlert({ className }: ClockAlertProps): ReactElement | null 
         >
             <TriangleAlert className="size-[1.4em] shrink-0" aria-hidden="true" />
             <p className="flex-1 text-pretty">
-                {skew === null ? 'The system clock changed' : 'The system clock moved '}
-                {skew !== null && <span className="font-semibold">{skew}</span>}
+                {skew === null ? (
+                    'The system clock changed'
+                ) : (
+                    <>
+                        The system clock moved <span className="font-semibold">{skew}</span>
+                    </>
+                )}
                 {timesPreserved
                     ? '. The times below were adjusted to match and are still correct.'
                     : '. Check the times below against a clock you trust before relying on them.'}

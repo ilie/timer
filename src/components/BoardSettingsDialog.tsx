@@ -11,7 +11,7 @@ type BoardSettingsDialogProps = {
     className?: string;
 };
 
-const CENTRE_NUMBER_PATTERN = /^[A-Za-z0-9-]{2,10}$/;
+const centreNumberPattern = /^[A-Za-z0-9-]{2,10}$/;
 
 export function BoardSettingsDialog({ onClose, className }: BoardSettingsDialogProps): ReactElement {
     const [centreNumber, setDraftCentreNumber] = useState(() => getSnapshot().centreNumber);
@@ -20,7 +20,7 @@ export function BoardSettingsDialog({ onClose, className }: BoardSettingsDialogP
     const centreNumberRef = useRef<HTMLInputElement>(null);
 
     const trimmedCentreNumber = centreNumber.trim();
-    const centreNumberValid = CENTRE_NUMBER_PATTERN.test(trimmedCentreNumber);
+    const centreNumberValid = centreNumberPattern.test(trimmedCentreNumber);
     const showsError = !centreNumberValid && (saveAttempted || touched);
 
     function handleCentreNumberChange(event: ChangeEvent<HTMLInputElement>) {
@@ -58,18 +58,15 @@ export function BoardSettingsDialog({ onClose, className }: BoardSettingsDialogP
             >
                 {(control) => (
                     <TextInput
-                        id={control.id}
+                        control={control}
                         ref={centreNumberRef}
                         data-initial-focus
-                        invalid={control.invalid}
                         type="text"
                         autoComplete="off"
                         spellCheck={false}
                         value={centreNumber}
                         onChange={handleCentreNumberChange}
                         onBlur={handleCentreNumberBlur}
-                        aria-invalid={control.invalid}
-                        aria-describedby={control.describedBy}
                     />
                 )}
             </DialogField>

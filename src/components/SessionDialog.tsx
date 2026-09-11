@@ -5,11 +5,11 @@ import { DialogField } from './DialogField';
 import { Select, TextInput } from './UI/FormControl';
 import { ModeField } from './ModeField';
 import { ModalDialog } from './ModalDialog';
-import { MAX_EXTRA_MINUTES } from '../config/board';
+import { maxExtraMinutes } from '../config/board';
 import { examByName, exams } from '../config/exams';
 import type { Mode } from '../config/exams';
 import { addSession, getSnapshot, setSessionConfig } from '../store/boardStore';
-import { EMPTY_DRAFT, NOTHING_TOUCHED, parseExtraMinutes } from '../lib/sessionDraft';
+import { emptyDraft, nothingTouched, parseExtraMinutes } from '../lib/sessionDraft';
 import type { DraftSession, FieldName } from '../lib/sessionDraft';
 
 export type SessionDialogTarget = { kind: 'add' } | { kind: 'edit'; sessionId: string };
@@ -20,16 +20,16 @@ type SessionDialogProps = {
     className?: string;
 };
 
-/** The dialog's own copy of the configuration, held as the strings its controls carry. */
-const ALL_MODES: readonly Mode[] = ['paper', 'digital'];
+/** What the format field offers before an exam has been chosen to narrow it. */
+const allModes: readonly Mode[] = ['paper', 'digital'];
 
 function draftFor(target: SessionDialogTarget): DraftSession {
     if (target.kind === 'add') {
-        return EMPTY_DRAFT;
+        return emptyDraft;
     }
     const session = getSnapshot().sessions.find((candidate) => candidate.id === target.sessionId);
     if (session === undefined) {
-        return EMPTY_DRAFT;
+        return emptyDraft;
     }
     return {
         examName: session.examName,
@@ -41,7 +41,7 @@ function draftFor(target: SessionDialogTarget): DraftSession {
 
 export function SessionDialog({ target, onClose, className }: SessionDialogProps): ReactElement {
     const [draft, setDraft] = useState<DraftSession>(() => draftFor(target));
-    const [touched, setTouched] = useState<Record<FieldName, boolean>>(NOTHING_TOUCHED);
+    const [touched, setTouched] = useState<Record<FieldName, boolean>>(nothingTouched);
     const [saveAttempted, setSaveAttempted] = useState(false);
     const examRef = useRef<HTMLSelectElement>(null);
     const partRef = useRef<HTMLSelectElement>(null);
@@ -58,7 +58,7 @@ export function SessionDialog({ target, onClose, className }: SessionDialogProps
     const part = exam?.examParts[partIndex];
     const mode = draft.mode;
     const extraMinutes = parseExtraMinutes(draft.extraMinutes);
-    const availableModes = exam?.modes ?? ALL_MODES;
+    const availableModes = exam?.modes ?? allModes;
 
     const showsError = (field: FieldName, invalid: boolean): boolean => invalid && (saveAttempted || touched[field]);
 
@@ -163,16 +163,13 @@ export function SessionDialog({ target, onClose, className }: SessionDialogProps
             >
                 {(control) => (
                     <Select
-                        id={control.id}
+                        control={control}
                         ref={examRef}
                         data-initial-focus
-                        invalid={control.invalid}
                         value={draft.examName}
                         onChange={handleExamChange}
                         onBlur={handleExamBlur}
                         required
-                        aria-invalid={control.invalid}
-                        aria-describedby={control.describedBy}
                     >
                         <option value="">Choose an exam</option>
                         {exams.map((candidate) => (
@@ -192,16 +189,13 @@ export function SessionDialog({ target, onClose, className }: SessionDialogProps
             >
                 {(control) => (
                     <Select
-                        id={control.id}
+                        control={control}
                         ref={partRef}
-                        invalid={control.invalid}
                         value={draft.partValue}
                         onChange={handlePartChange}
                         onBlur={handlePartBlur}
                         disabled={exam === undefined}
                         required
-                        aria-invalid={control.invalid}
-                        aria-describedby={control.describedBy}
                     >
                         <option value="">{exam === undefined ? 'Choose an exam first' : 'Choose a component'}</option>
                         {exam?.examParts.map((examPart, index) => (
@@ -230,25 +224,22 @@ export function SessionDialog({ target, onClose, className }: SessionDialogProps
                 icon={Timer}
                 error={
                     showsError('extraMinutes', extraMinutes === null)
-                        ? `Enter whole minutes between 0 and ${MAX_EXTRA_MINUTES}.`
+                        ? `Enter whole minutes between 0 and ${maxExtraMinutes}.`
                         : null
                 }
             >
                 {(control) => (
                     <TextInput
-                        id={control.id}
+                        control={control}
                         ref={extraMinutesRef}
-                        invalid={control.invalid}
                         type="number"
                         min="0"
-                        max={MAX_EXTRA_MINUTES}
+                        max={maxExtraMinutes}
                         step="1"
                         inputMode="numeric"
                         value={draft.extraMinutes}
                         onChange={handleExtraMinutesChange}
                         onBlur={handleExtraMinutesBlur}
-                        aria-invalid={control.invalid}
-                        aria-describedby={control.describedBy}
                     />
                 )}
             </DialogField>

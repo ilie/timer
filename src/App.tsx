@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import Header from './components/UI/Header';
-import Footer from './components/UI/Footer';
+import type { ReactElement } from 'react';
+import { Header } from './components/UI/Header';
+import { Footer } from './components/UI/Footer';
 import { Board } from './components/Board';
 import { ClockAlert } from './components/ClockAlert';
 import { BoardSettingsDialog } from './components/BoardSettingsDialog';
@@ -8,7 +9,7 @@ import { SessionDialog } from './components/SessionDialog';
 import type { SessionDialogTarget } from './components/SessionDialog';
 import { useClockJump } from './hooks/useClockJump';
 
-function App() {
+export function App(): ReactElement {
     const [sessionDialogTarget, setSessionDialogTarget] = useState<SessionDialogTarget | null>(null);
     const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
 
@@ -53,5 +54,3 @@ function App() {
         </div>
     );
 }
-
-export default App;

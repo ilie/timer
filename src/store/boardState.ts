@@ -2,13 +2,13 @@
  * The board's state container: one snapshot, its listeners, its persistence
  * and its expiry timer. The actions that change it live in `boardStore.ts`.
  */
-import { DEFAULT_CENTRE_NUMBER } from '../config/board';
-import { STORAGE_KEY } from '../config/storage';
-import { MS_PER_MINUTE } from '../lib/time';
+import { defaultCentreNumber } from '../config/board';
+import { storageKey } from '../config/storage';
+import { millisecondsPerMinute } from '../lib/time';
 import { reset, restore } from '../lib/timer';
 import { parseStoredBoard } from './parseBoard';
 import type { StoredBoard } from './parseBoard';
-import { sessionDurationMs } from './session';
+import { sessionDurationMilliseconds } from './session';
 import type { BreakState, Session } from './session';
 
 export type BoardState = {
@@ -17,7 +17,7 @@ export type BoardState = {
     break: BreakState;
     clockJumpDetected: boolean;
     /** How far the system clock moved when the jump was noticed, 0 if unknown. */
-    clockSkewMs: number;
+    clockSkewMilliseconds: number;
     /** True when the jump was compensated for and remaining times still hold. */
     clockTimesPreserved: boolean;
     persistFailed: boolean;
@@ -25,16 +25,16 @@ export type BoardState = {
     revision: number;
 };
 
-const DEFAULT_BREAK_MINUTES = 15;
+const defaultBreakMinutes = 15;
 
-const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
+const maxTimeoutDelayMilliseconds = 2_147_483_647;
 
 const emptyBoard = (): BoardState => ({
-    centreNumber: DEFAULT_CENTRE_NUMBER,
+    centreNumber: defaultCentreNumber,
     sessions: [],
-    break: { timer: reset(), minutes: DEFAULT_BREAK_MINUTES },
+    break: { timer: reset(), minutes: defaultBreakMinutes },
     clockJumpDetected: false,
-    clockSkewMs: 0,
+    clockSkewMilliseconds: 0,
     clockTimesPreserved: false,
     persistFailed: false,
     restoreDiscarded: false,
@@ -49,7 +49,7 @@ let expiryTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const readStoredPayload = (): string | null => {
     try {
-        return localStorage.getItem(STORAGE_KEY);
+        return localStorage.getItem(storageKey);
     } catch {
         return null;
     }
@@ -62,7 +62,7 @@ const writeStoredPayload = (state: BoardState): boolean => {
         break: state.break,
     };
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+        localStorage.setItem(storageKey, JSON.stringify(stored));
         return true;
     } catch {
         return false;
@@ -99,7 +99,7 @@ const scheduleExpiry = (): void => {
     if (expiryAt === null) {
         return;
     }
-    expiryTimeout = setTimeout(announceExpiry, Math.min(expiryAt - now, MAX_TIMEOUT_DELAY_MS));
+    expiryTimeout = setTimeout(announceExpiry, Math.min(expiryAt - now, maxTimeoutDelayMilliseconds));
 };
 
 export const applySnapshot = (next: BoardState): void => {
@@ -119,7 +119,7 @@ const announceExpiry = (): void => {
 const restoreSessions = (sessions: Session[], now: number): { sessions: Session[]; clamped: boolean } => {
     let clamped = false;
     const restored = sessions.map((session) => {
-        const result = restore(session.timer, sessionDurationMs(session), now, { clamp: true });
+        const result = restore(session.timer, sessionDurationMilliseconds(session), now, { clamp: true });
         if (result.clamped) {
             clamped = true;
         }
@@ -144,7 +144,7 @@ export const hydrateFromStorage = (): void => {
     // The break is deliberately not clamped: unlike a session it is not rendered,
     // so a stale stored value harms nothing, and leaving the far-future case
     // reachable keeps the expiry-scheduling overflow guard under test.
-    const restoredBreak = restore(stored.break.timer, stored.break.minutes * MS_PER_MINUTE, now, {
+    const restoredBreak = restore(stored.break.timer, stored.break.minutes * millisecondsPerMinute, now, {
         clamp: false,
     });
     applySnapshot({
@@ -158,7 +158,7 @@ export const hydrateFromStorage = (): void => {
 };
 
 const handleStorageEvent = (event: StorageEvent): void => {
-    if (event.key !== null && event.key !== STORAGE_KEY) {
+    if (event.key !== null && event.key !== storageKey) {
         return;
     }
     hydrateFromStorage();

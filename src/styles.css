@@ -78,10 +78,26 @@
     --color-linguaskill-slate-800: oklch(0.3 0.008 260);
     --color-linguaskill-slate-900: oklch(0.23 0.006 260);
     --color-linguaskill-slate-950: oklch(0.15 0.004 260);
-    --text-tab: clamp(0.875rem, 1.15vw, 1.5rem);
-    --text-centre-number: clamp(1.125rem, 2.1vw, 2.75rem);
-    --text-control: clamp(0.875rem, 1.05vw, 1.375rem);
+    --tab-text: clamp(0.875rem, 1.15vw, 1.5rem);
+    --centre-number-text: clamp(1.125rem, 2.1vw, 2.75rem);
+    --control-text: clamp(0.875rem, 1.05vw, 1.375rem);
     --tab-flare: 0.875rem;
+}
+
+@utility tab-text {
+    font-size: var(--tab-text);
+}
+
+@utility centre-number-text {
+    font-size: var(--centre-number-text);
+}
+
+@utility control-text {
+    font-size: var(--control-text);
+}
+
+@utility board-value-text {
+    font-size: var(--board-value-size, 1.75rem);
 }
 
 @utility browser-tab {

@@ -1,6 +1,6 @@
+import { twMerge } from 'tailwind-merge';
 import type { ReactElement, Ref } from 'react';
 import { FileText, Monitor } from 'lucide-react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { DialogError, DialogHint } from './DialogField';
 import type { Mode } from '../config/exams';
 
@@ -39,7 +39,7 @@ export function ModeField({
 }: ModeFieldProps): ReactElement {
     return (
         <fieldset
-            className={mergeClasses('flex flex-col gap-2 border-0 p-0', className)}
+            className={twMerge('flex flex-col gap-2 border-0 p-0', className)}
             onBlur={onBlur}
             aria-describedby={invalid ? errorId : undefined}
         >
@@ -48,7 +48,7 @@ export function ModeField({
                 {availableModes.map((mode, index) => (
                     <label
                         key={mode}
-                        className={mergeClasses(
+                        className={twMerge(
                             'inline-flex items-center gap-3 rounded-lg px-4 py-3 text-lg',
                             waiting
                                 ? 'border-linguaskill-slate-200 bg-linguaskill-slate-50 text-linguaskill-slate-400 cursor-not-allowed border'

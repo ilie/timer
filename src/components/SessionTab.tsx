@@ -1,6 +1,6 @@
+import { twMerge } from 'tailwind-merge';
 import type { DragEvent, KeyboardEvent, ReactElement } from 'react';
 import { X } from 'lucide-react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { ExamName } from './ExamName';
 import { Button } from './UI/Button';
 import type { SessionView } from '../lib/sessionView';
@@ -60,6 +60,14 @@ export function SessionTab({
         onDragStateChange(null);
     }
 
+    function handleConfigureClick() {
+        onEditSession(view.id);
+    }
+
+    function handleRemoveClick() {
+        onRequestRemove(view);
+    }
+
     function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
         if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) {
             return;
@@ -71,8 +79,8 @@ export function SessionTab({
 
     return (
         <span
-            className={mergeClasses(
-                'browser-tab group/tab text-tab flex min-w-0 cursor-grab items-center gap-1 pt-1.5 pr-2 pb-1.5 pl-4 active:cursor-grabbing',
+            className={twMerge(
+                'browser-tab group/tab tab-text flex min-w-0 cursor-grab items-center gap-1 pt-1.5 pr-2 pb-1.5 pl-4 active:cursor-grabbing',
                 draggingId === view.id && 'opacity-50',
                 className,
             )}
@@ -88,9 +96,7 @@ export function SessionTab({
                 className="text-linguaskill-slate-700 hover:text-vlec-blue-900 focus-visible:outline-vlec-blue-700 inline-flex min-w-0 items-baseline gap-0 rounded bg-transparent hover:bg-transparent"
                 aria-label={`Configure ${view.examLabel}`}
                 aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-                onClick={() => {
-                    onEditSession(view.id);
-                }}
+                onClick={handleConfigureClick}
                 onKeyDown={handleKeyDown}
             >
                 <ExamName name={view.examName} digital={view.digital} centred={false} />
@@ -99,9 +105,7 @@ export function SessionTab({
                 variant="ghost"
                 className="rounded-full p-1"
                 aria-label={`Remove ${view.examLabel}`}
-                onClick={() => {
-                    onRequestRemove(view);
-                }}
+                onClick={handleRemoveClick}
             >
                 <X className="size-[1.15em]" strokeWidth={2.25} aria-hidden="true" />
             </Button>

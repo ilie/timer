@@ -12,7 +12,7 @@ const view = (id: string, examName: string): SessionView =>
         digital: false,
         status: 'idle',
         countsDown: false,
-        durationMs: 0,
+        durationMilliseconds: 0,
         extraMinutes: 0,
         allowedTime: '45min',
         timer: { status: 'idle' },

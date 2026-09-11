@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { act } from 'react';
 import type { ReactElement } from 'react';
-import { DISPLAY_TICK_MS } from '../config/timing';
+import { displayTickMilliseconds } from '../config/timing';
 import { useNow } from './useNow';
 
-const EXAM_START = new Date('2026-06-11T09:00:00.000Z');
+const examStart = new Date('2026-06-11T09:00:00.000Z');
 
 function Clock({ name }: { name: string }): ReactElement {
     const now = useNow();
@@ -21,15 +21,15 @@ const setVisibility = (state: 'visible' | 'hidden'): void => {
     document.dispatchEvent(new Event('visibilitychange'));
 };
 
-const advance = (ms: number): void => {
+const advance = (milliseconds: number): void => {
     act(() => {
-        vi.advanceTimersByTime(ms);
+        vi.advanceTimersByTime(milliseconds);
     });
 };
 
 beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(EXAM_START);
+    vi.setSystemTime(examStart);
     setVisibility('visible');
 });
 
@@ -48,14 +48,14 @@ describe('one clock for the whole board', () => {
 
         // Step across a full second in quarter-second samples, the rate the board ticks at.
         for (let step = 0; step < 8; step += 1) {
-            advance(DISPLAY_TICK_MS);
+            advance(displayTickMilliseconds);
             expect(readClock('first')).toBe(readClock('second'));
         }
     });
 
     it('gives a column mounted later the same reading as one already running', () => {
         const view = render(<Clock name="first" />);
-        advance(DISPLAY_TICK_MS * 3);
+        advance(displayTickMilliseconds * 3);
 
         view.rerender(
             <>
@@ -84,7 +84,7 @@ describe('coming back from a display that was asleep', () => {
             setVisibility('visible');
         });
 
-        expect(Number(readClock('first'))).toBe(EXAM_START.getTime() + 10 * 60_000);
+        expect(Number(readClock('first'))).toBe(examStart.getTime() + 10 * 60_000);
     });
 
     it('corrects itself on pageshow, for a restore from the back/forward cache', () => {
@@ -95,6 +95,6 @@ describe('coming back from a display that was asleep', () => {
             window.dispatchEvent(new Event('pageshow'));
         });
 
-        expect(Number(readClock('first'))).toBe(EXAM_START.getTime() + 5 * 60_000);
+        expect(Number(readClock('first'))).toBe(examStart.getTime() + 5 * 60_000);
     });
 });

@@ -1,5 +1,5 @@
+import { twMerge } from 'tailwind-merge';
 import type { ReactElement, ReactNode } from 'react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { BoardValue } from './BoardValue';
 import { ExamName } from './ExamName';
 import { RemainingTime } from './RemainingTime';
@@ -38,7 +38,7 @@ function ValueCell({ label, children, className }: ValueCellProps): ReactElement
 }
 
 /** A row reaches into a cell when it has something to draw there. */
-export function fillsCell(row: BoardRow, column: SessionView | undefined): boolean {
+export function reachesInto(row: BoardRow, column: SessionView | undefined): boolean {
     if (column === undefined) {
         return false;
     }
@@ -47,8 +47,8 @@ export function fillsCell(row: BoardRow, column: SessionView | undefined): boole
 
 export function boardRows({ labelLaneVisible, showsCountdown, onRequestReset }: RowContext): BoardRow[] {
     const alignment = labelLaneVisible ? 'text-left' : 'text-center';
-    const valueCell = mergeClasses('overflow-hidden px-6 align-middle', alignment);
-    const controlsCell = mergeClasses('px-6 align-middle', alignment);
+    const valueCell = twMerge('overflow-hidden px-6 align-middle', alignment);
+    const controlsCell = twMerge('px-6 align-middle', alignment);
     const perColumnLabel = (label: string): string | null => (labelLaneVisible ? null : label);
 
     const supporting: BoardRow[] = [
@@ -104,7 +104,7 @@ export function boardRows({ labelLaneVisible, showsCountdown, onRequestReset }: 
                         label={perColumnLabel('Remaining')}
                         align={labelLaneVisible ? 'start' : 'center'}
                         timer={column.timer}
-                        durationMs={column.durationMs}
+                        durationMilliseconds={column.durationMilliseconds}
                     />
                 ) : null,
         },

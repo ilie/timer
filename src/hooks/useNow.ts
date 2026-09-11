@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { DISPLAY_TICK_MS } from '../config/timing';
+import { displayTickMilliseconds } from '../config/timing';
 
 /**
  * One shared wall-clock sample for the whole board.
@@ -34,7 +34,7 @@ const resyncIfVisible = (): void => {
 
 const startTicking = (): void => {
     now = Date.now();
-    ticker = setInterval(publish, DISPLAY_TICK_MS);
+    ticker = setInterval(publish, displayTickMilliseconds);
     document.addEventListener('visibilitychange', resyncIfVisible);
     window.addEventListener('pageshow', publish);
 };

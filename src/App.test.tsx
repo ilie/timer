@@ -2,8 +2,8 @@ import { StrictMode } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { UserEvent } from '@testing-library/user-event';
-import App from './App';
-import { STORAGE_KEY } from './config/storage';
+import { App } from './App';
+import { storageKey } from './config/storage';
 import { getSnapshot, hydrateFromStorage, startSession } from './store/boardStore';
 
 const idleSession = (id: string, examName: string, partIndex: number) => ({
@@ -15,34 +15,27 @@ const idleSession = (id: string, examName: string, partIndex: number) => ({
     timer: { status: 'idle' },
 });
 
-const seedFourSessions = () => {
+const seed = (sessions: readonly unknown[]): void => {
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({
             centreNumber: 'ES432',
-            sessions: [
-                idleSession('session-1', 'A2 Key', 0),
-                idleSession('session-2', 'C1 Advanced', 0),
-                idleSession('session-3', 'B1 Preliminary', 0),
-                idleSession('session-4', 'Pre A1 Starters', 0),
-            ],
+            sessions,
             break: { timer: { status: 'idle' }, minutes: 15 },
         }),
     );
     hydrateFromStorage();
 };
 
-const seedOneSession = () => {
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-            centreNumber: 'ES432',
-            sessions: [idleSession('session-1', 'B2 First', 0)],
-            break: { timer: { status: 'idle' }, minutes: 15 },
-        }),
-    );
-    hydrateFromStorage();
-};
+const seedFourSessions = () =>
+    seed([
+        idleSession('session-1', 'A2 Key', 0),
+        idleSession('session-2', 'C1 Advanced', 0),
+        idleSession('session-3', 'B1 Preliminary', 0),
+        idleSession('session-4', 'Pre A1 Starters', 0),
+    ]);
+
+const seedOneSession = () => seed([idleSession('session-1', 'B2 First', 0)]);
 
 const openAddDialog = async (user: UserEvent) => {
     await user.click(screen.getByRole('button', { name: 'Add Session' }));

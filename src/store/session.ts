@@ -1,6 +1,6 @@
 import { examByName } from '../config/exams';
 import type { Mode } from '../config/exams';
-import { MS_PER_MINUTE } from '../lib/time';
+import { millisecondsPerMinute } from '../lib/time';
 import type { TimerState } from '../lib/timer';
 
 export type SessionConfig = {
@@ -21,10 +21,10 @@ export type BreakState = {
 };
 
 /** How long this session's current component runs, including any extra time. */
-export const sessionDurationMs = (session: Session): number => {
+export const sessionDurationMilliseconds = (session: Session): number => {
     const part = examByName(session.examName)?.examParts[session.partIndex];
     if (part === undefined) {
         return 0;
     }
-    return (part.minutes + session.extraMinutes) * MS_PER_MINUTE;
+    return (part.minutes + session.extraMinutes) * millisecondsPerMinute;
 };

@@ -1,12 +1,13 @@
+import { twMerge } from 'tailwind-merge';
 import { useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 import { Pencil } from 'lucide-react';
-import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { BoardGrid } from './BoardGrid';
 import { EmptyBoard } from './EmptyBoard';
 import { PendingActionDialog, pendingActionFor } from './PendingActionDialog';
 import type { PendingAction } from './PendingActionDialog';
+import { boardRows } from './boardRows';
 import { rowHeights, useBoardScale } from '../hooks/useBoardScale';
 import type { BoardScaleLayout } from '../hooks/useBoardScale';
 import { useUnloadGuard } from '../hooks/useUnloadGuard';
@@ -29,10 +30,6 @@ type BoardProps = {
     className?: string;
 };
 
-const SUPPORTING_ROWS = 3;
-
-const COUNTDOWN_ROWS = 4;
-
 export function Board({ onAddSession, onEditSession, onEditCentreNumber, className }: BoardProps): ReactElement {
     const board = useSyncExternalStore(subscribe, getSnapshot);
     const now = useSyncExternalStore(subscribe, getClockSnapshot);
@@ -47,10 +44,12 @@ export function Board({ onAddSession, onEditSession, onEditCentreNumber, classNa
     const labelLaneVisible = columns.length === 1;
     const showsCountdown = columns.some((column) => column.countsDown);
 
+    // Built here rather than inside the grid, so the text scaling and the grid itself
+    // can never disagree about how many rows there are to fit.
+    const rows = boardRows({ labelLaneVisible, showsCountdown, onRequestReset: handleResetRequest });
     const layout: BoardScaleLayout = {
-        columns: Math.max(1, columns.length),
-        valueRows: showsCountdown ? COUNTDOWN_ROWS : SUPPORTING_ROWS,
-        hasControlsRow: showsCountdown,
+        valueRows: rows.filter((row) => row.kind === 'value').length,
+        hasControlsRow: rows.some((row) => row.kind === 'controls'),
         labelLane: labelLaneVisible,
     };
 
@@ -103,13 +102,13 @@ export function Board({ onAddSession, onEditSession, onEditCentreNumber, classNa
         <section
             ref={boardRef}
             tabIndex={-1}
-            className={mergeClasses('flex h-full min-h-0 w-full flex-col', className)}
+            className={twMerge('flex h-full min-h-0 w-full flex-col', className)}
             data-density={density}
             data-columns={columns.length}
         >
             <Button
                 variant="quiet"
-                className="text-centre-number focus-visible:outline-vlec-blue-700 mr-auto mb-2 ml-6 items-baseline rounded-md px-2 py-1 text-left font-normal tracking-[0.16em] uppercase"
+                className="focus-visible:outline-vlec-blue-700 centre-number-text mr-auto mb-2 ml-6 items-baseline rounded-md px-2 py-1 text-left font-normal tracking-[0.16em] uppercase"
                 aria-label={`Edit centre no: ${board.centreNumber}`}
                 onClick={onEditCentreNumber}
             >
@@ -121,13 +120,12 @@ export function Board({ onAddSession, onEditSession, onEditCentreNumber, classNa
             ) : (
                 <BoardGrid
                     columns={columns}
+                    rows={rows}
                     labelLaneVisible={labelLaneVisible}
-                    showsCountdown={showsCountdown}
                     heights={rowHeights(layout)}
                     onAddSession={onAddSession}
                     onEditSession={onEditSession}
                     onRequestRemove={handleRemoveRequest}
-                    onRequestReset={handleResetRequest}
                     onMoveSession={moveSession}
                     regionRef={regionRef}
                     tabStripRef={tabStripRef}

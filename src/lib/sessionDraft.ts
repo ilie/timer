@@ -1,4 +1,4 @@
-import { MAX_EXTRA_MINUTES } from '../config/board';
+import { maxExtraMinutes } from '../config/board';
 import type { Mode } from '../config/exams';
 
 /** The dialog's working copy of a session, held as the strings the form edits. */
@@ -11,14 +11,14 @@ export type DraftSession = {
 
 export type FieldName = 'exam' | 'part' | 'mode' | 'extraMinutes';
 
-export const EMPTY_DRAFT: DraftSession = {
+export const emptyDraft: DraftSession = {
     examName: '',
     partValue: '',
     mode: '',
     extraMinutes: '',
 };
 
-export const NOTHING_TOUCHED: Record<FieldName, boolean> = {
+export const nothingTouched: Record<FieldName, boolean> = {
     exam: false,
     part: false,
     mode: false,
@@ -35,5 +35,5 @@ export function parseExtraMinutes(value: string): number | null {
         return null;
     }
     const minutes = Number(trimmed);
-    return minutes > MAX_EXTRA_MINUTES ? null : minutes;
+    return minutes > maxExtraMinutes ? null : minutes;
 }

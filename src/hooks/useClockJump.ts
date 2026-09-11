@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { CLOCK_JUMP_SAMPLE_MS } from '../config/timing';
+import { clockJumpSampleMilliseconds } from '../config/timing';
 import { classifyClockJump } from '../lib/clockJump';
 import { applyClockStep, reportUnverifiedClockJump } from '../store/boardStore';
 
@@ -13,8 +13,8 @@ import { applyClockStep, reportUnverifiedClockJump } from '../store/boardStore';
  */
 export function useClockJump(): void {
     useEffect(() => {
-        let prevDate = Date.now();
-        let prevPerf = performance.now();
+        let previousWallClock = Date.now();
+        let previousMonotonic = performance.now();
         let stayedVisible = document.visibilityState === 'visible';
 
         const noteVisibility = (): void => {
@@ -24,29 +24,29 @@ export function useClockJump(): void {
         };
 
         const sampleClocks = (): void => {
-            const nowDate = Date.now();
-            const nowPerf = performance.now();
+            const nowWallClock = Date.now();
+            const nowMonotonic = performance.now();
             const jump = classifyClockJump({
-                prevDate,
-                prevPerf,
-                nowDate,
-                nowPerf,
-                expectedMs: CLOCK_JUMP_SAMPLE_MS,
+                previousWallClock,
+                previousMonotonic,
+                nowWallClock,
+                nowMonotonic,
+                expectedMilliseconds: clockJumpSampleMilliseconds,
                 pageStayedVisible: stayedVisible && document.visibilityState === 'visible',
             });
-            prevDate = nowDate;
-            prevPerf = nowPerf;
+            previousWallClock = nowWallClock;
+            previousMonotonic = nowMonotonic;
             stayedVisible = document.visibilityState === 'visible';
             if (jump.kind === 'stepped') {
-                applyClockStep(jump.skewMs);
+                applyClockStep(jump.skewMilliseconds);
                 return;
             }
             if (jump.kind === 'unverified') {
-                reportUnverifiedClockJump(jump.skewMs);
+                reportUnverifiedClockJump(jump.skewMilliseconds);
             }
         };
 
-        const sampleTimer = setInterval(sampleClocks, CLOCK_JUMP_SAMPLE_MS);
+        const sampleTimer = setInterval(sampleClocks, clockJumpSampleMilliseconds);
         document.addEventListener('visibilitychange', noteVisibility);
 
         return () => {

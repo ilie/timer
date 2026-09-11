@@ -1,9 +1,9 @@
-import { MAX_BREAK_MINUTES, MAX_EXTRA_MINUTES, MAX_SESSIONS } from '../config/board';
+import { maxBreakMinutes, maxExtraMinutes, maxSessions } from '../config/board';
 import { examByName } from '../config/exams';
 import type { Mode } from '../config/exams';
-import { MS_PER_MINUTE } from '../lib/time';
+import { millisecondsPerMinute } from '../lib/time';
 import type { TimerState } from '../lib/timer';
-import { sessionDurationMs } from './session';
+import { sessionDurationMilliseconds } from './session';
 import type { BreakState, Session } from './session';
 
 export type StoredBoard = {
@@ -43,8 +43,8 @@ const parseTimerState = (value: unknown): TimerState | null => {
     return null;
 };
 
-const pausedRemainingFitsDuration = (timer: TimerState, durationMs: number): boolean =>
-    timer.status !== 'paused' || timer.remainingMs <= durationMs;
+const pausedRemainingFitsDuration = (timer: TimerState, durationMilliseconds: number): boolean =>
+    timer.status !== 'paused' || timer.remainingMs <= durationMilliseconds;
 
 const parseMode = (value: unknown): Mode | null => (value === 'paper' || value === 'digital' ? value : null);
 
@@ -62,7 +62,7 @@ const parseSession = (value: unknown): Session | null => {
         partIndex < 0 ||
         !isWholeNumber(extraMinutes) ||
         extraMinutes < 0 ||
-        extraMinutes > MAX_EXTRA_MINUTES ||
+        extraMinutes > maxExtraMinutes ||
         mode === null ||
         timer === null
     ) {
@@ -73,7 +73,7 @@ const parseSession = (value: unknown): Session | null => {
         return null;
     }
     const session: Session = { id, examName, partIndex, mode, extraMinutes, timer };
-    if (!pausedRemainingFitsDuration(timer, sessionDurationMs(session))) {
+    if (!pausedRemainingFitsDuration(timer, sessionDurationMilliseconds(session))) {
         return null;
     }
     return session;
@@ -85,10 +85,10 @@ const parseBreak = (value: unknown): BreakState | null => {
     }
     const timer = parseTimerState(value.timer);
     const { minutes } = value;
-    if (timer === null || !isWholeNumber(minutes) || minutes < 0 || minutes > MAX_BREAK_MINUTES) {
+    if (timer === null || !isWholeNumber(minutes) || minutes < 0 || minutes > maxBreakMinutes) {
         return null;
     }
-    if (!pausedRemainingFitsDuration(timer, minutes * MS_PER_MINUTE)) {
+    if (!pausedRemainingFitsDuration(timer, minutes * millisecondsPerMinute)) {
         return null;
     }
     return { timer, minutes };
@@ -109,7 +109,7 @@ export const parseStoredBoard = (raw: string): StoredBoard | null => {
     if (typeof centreNumber !== 'string' || breakState === null || !Array.isArray(value.sessions)) {
         return null;
     }
-    if (value.sessions.length > MAX_SESSIONS) {
+    if (value.sessions.length > maxSessions) {
         return null;
     }
     const sessions: Session[] = [];

@@ -1,15 +1,9 @@
+import { twMerge } from 'tailwind-merge';
 import { useId } from 'react';
-import { mergeClasses } from '../lib/mergeClasses';
 import type { ReactElement, ReactNode } from 'react';
 import { CircleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
-/** Wiring a field's control needs from the surrounding label and message. */
-export type DialogControl = {
-    id: string;
-    invalid: boolean;
-    describedBy: string | undefined;
-};
+import type { FieldControl } from './UI/FormControl';
 
 type DialogFieldProps = {
     label: string;
@@ -20,7 +14,7 @@ type DialogFieldProps = {
     error?: string | null;
     /** Standing guidance, shown only while there is no error to show instead. */
     hint?: string;
-    children: (control: DialogControl) => ReactNode;
+    children: (control: FieldControl) => ReactNode;
     className?: string;
 };
 
@@ -43,7 +37,7 @@ type DialogHintProps = {
 };
 
 export function DialogHint({ children, className }: DialogHintProps): ReactElement {
-    return <p className={mergeClasses('text-linguaskill-slate-500 text-base', className)}>{children}</p>;
+    return <p className={twMerge('text-linguaskill-slate-500 text-base', className)}>{children}</p>;
 }
 
 export function DialogError({ id, children, className }: DialogErrorProps): ReactElement {
@@ -51,10 +45,7 @@ export function DialogError({ id, children, className }: DialogErrorProps): Reac
         <p
             id={id}
             role="alert"
-            className={mergeClasses(
-                'text-vlec-red-700 inline-flex items-center gap-2 text-base font-semibold',
-                className,
-            )}
+            className={twMerge('text-vlec-red-700 inline-flex items-center gap-2 text-base font-semibold', className)}
         >
             <CircleAlert className="size-[1em] shrink-0" aria-hidden="true" />
             {children}
@@ -66,7 +57,7 @@ function DialogLabel({ htmlFor, icon: LabelIcon, children, className }: DialogLa
     return (
         <label
             htmlFor={htmlFor}
-            className={mergeClasses(
+            className={twMerge(
                 'text-linguaskill-slate-700 inline-flex items-center gap-2 text-base font-medium',
                 className,
             )}
@@ -93,22 +84,23 @@ export function DialogField({
     const id = useId();
     const errorId = useId();
     const invalid = error !== null;
+    const labelElement = (
+        <DialogLabel htmlFor={id} icon={icon}>
+            {label}
+        </DialogLabel>
+    );
 
     return (
-        <div className={mergeClasses('flex flex-col gap-2', className)}>
+        <div className={twMerge('flex flex-col gap-2', className)}>
             {required ? (
                 <div className="flex items-baseline gap-2">
-                    <DialogLabel htmlFor={id} icon={icon}>
-                        {label}
-                    </DialogLabel>
+                    {labelElement}
                     <span className="text-linguaskill-slate-500 text-sm" aria-hidden="true">
                         required
                     </span>
                 </div>
             ) : (
-                <DialogLabel htmlFor={id} icon={icon}>
-                    {label}
-                </DialogLabel>
+                labelElement
             )}
             {children({ id, invalid, describedBy: invalid ? errorId : undefined })}
             {error !== null && <DialogError id={errorId}>{error}</DialogError>}

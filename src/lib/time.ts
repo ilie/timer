@@ -1,9 +1,9 @@
-export const MS_PER_SECOND = 1000;
+export const millisecondsPerSecond = 1000;
 
-export const SECONDS_PER_MINUTE = 60;
+export const secondsPerMinute = 60;
 
-export const MINUTES_PER_HOUR = 60;
+export const minutesPerHour = 60;
 
-export const SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+export const secondsPerHour = secondsPerMinute * minutesPerHour;
 
-export const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
+export const millisecondsPerMinute = millisecondsPerSecond * secondsPerMinute;

@@ -1,5 +1,5 @@
-import { MS_PER_MINUTE } from '../lib/time';
+import { millisecondsPerMinute } from '../lib/time';
 
-export const WARNING_MS = 10 * MS_PER_MINUTE;
+export const warningMilliseconds = 10 * millisecondsPerMinute;
 
-export const CRITICAL_MS = 5 * MS_PER_MINUTE;
+export const criticalMilliseconds = 5 * millisecondsPerMinute;

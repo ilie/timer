@@ -1,15 +1,15 @@
-import { mergeClasses } from '../../lib/mergeClasses';
+import { twMerge } from 'tailwind-merge';
 import type { ReactElement } from 'react';
 
 type FooterProps = {
     className?: string;
 };
 
-function Footer({ className }: FooterProps): ReactElement {
+export function Footer({ className }: FooterProps): ReactElement {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className={mergeClasses('shrink-0 bg-white px-8 py-2', className)}>
+        <footer className={twMerge('shrink-0 bg-white px-8 py-2', className)}>
             <p>
                 <a
                     className="text-linguaskill-slate-500 hover:text-linguaskill-slate-700 text-sm no-underline transition-colors"
@@ -22,5 +22,3 @@ function Footer({ className }: FooterProps): ReactElement {
         </footer>
     );
 }
-
-export default Footer;

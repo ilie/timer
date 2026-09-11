@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { STORAGE_KEY } from '../config/storage';
-import { remainingMs, statusOf } from '../lib/timer';
+import { storageKey } from '../config/storage';
+import { remainingMilliseconds, statusOf } from '../lib/timer';
 import {
     addSession,
     advanceComponent,
@@ -10,7 +10,7 @@ import {
     moveSession,
     pauseSession,
     removeSession,
-    sessionDurationMs,
+    sessionDurationMilliseconds,
     setCentreNumber,
     setClockJumpDetected,
     setSessionConfig,
@@ -19,9 +19,9 @@ import {
 } from './boardStore';
 import type { Session } from './boardStore';
 
-const EXAM_START = new Date('2026-06-11T09:00:00.000Z');
-const READING_MS = 75 * 60_000;
-const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
+const examStart = new Date('2026-06-11T09:00:00.000Z');
+const readingMilliseconds = 75 * 60_000;
+const maxTimeoutDelayMilliseconds = 2_147_483_647;
 
 const idleSession = {
     id: 'reading',
@@ -40,7 +40,7 @@ const storedBoard = (sessions: readonly unknown[], breakTimer: unknown = { statu
     });
 
 const seed = (sessions: readonly unknown[], breakTimer?: unknown): void => {
-    localStorage.setItem(STORAGE_KEY, storedBoard(sessions, breakTimer));
+    localStorage.setItem(storageKey, storedBoard(sessions, breakTimer));
     hydrateFromStorage();
 };
 
@@ -55,7 +55,7 @@ const endsAtOf = (id: string): number | undefined => {
 
 beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(EXAM_START);
+    vi.setSystemTime(examStart);
     localStorage.clear();
     setClockJumpDetected(false);
     hydrateFromStorage();
@@ -85,7 +85,7 @@ describe('snapshot identity', () => {
 
         expect(listener).toHaveBeenCalledTimes(1);
         expect(Object.is(before, getSnapshot())).toBe(false);
-        expect(timerOf('reading')).toEqual({ status: 'running', endsAt: Date.now() + READING_MS });
+        expect(timerOf('reading')).toEqual({ status: 'running', endsAt: Date.now() + readingMilliseconds });
         unsubscribe();
     });
 
@@ -111,7 +111,7 @@ describe('expiry timer', () => {
         const unsubscribe = subscribe(listener);
         const before = getSnapshot();
 
-        vi.advanceTimersByTime(READING_MS - 1);
+        vi.advanceTimersByTime(readingMilliseconds - 1);
         expect(listener).not.toHaveBeenCalled();
         expect(Object.is(before, getSnapshot())).toBe(true);
 
@@ -144,7 +144,7 @@ describe('expiry timer', () => {
 
 describe('persistence', () => {
     it('writes on a transition, never on hydration, expiry or the passage of time', () => {
-        localStorage.setItem(STORAGE_KEY, storedBoard([idleSession]));
+        localStorage.setItem(storageKey, storedBoard([idleSession]));
         const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
         hydrateFromStorage();
@@ -152,9 +152,9 @@ describe('persistence', () => {
 
         startSession('reading');
         expect(setItem).toHaveBeenCalledTimes(1);
-        expect(setItem.mock.calls[0]?.[0]).toBe(STORAGE_KEY);
+        expect(setItem.mock.calls[0]?.[0]).toBe(storageKey);
 
-        vi.advanceTimersByTime(READING_MS);
+        vi.advanceTimersByTime(readingMilliseconds);
         getSnapshot();
         expect(setItem).toHaveBeenCalledTimes(1);
     });
@@ -163,10 +163,10 @@ describe('persistence', () => {
         seed([idleSession]);
         startSession('reading');
 
-        const written: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+        const written: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
         expect(written).toEqual({
             centreNumber: 'ES432',
-            sessions: [{ ...idleSession, timer: { status: 'running', endsAt: Date.now() + READING_MS } }],
+            sessions: [{ ...idleSession, timer: { status: 'running', endsAt: Date.now() + readingMilliseconds } }],
             break: { timer: { status: 'idle' }, minutes: 15 },
         });
     });
@@ -175,7 +175,7 @@ describe('persistence', () => {
         seed([idleSession]);
         startSession('reading');
 
-        const written: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
+        const written: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
         expect(written).not.toHaveProperty('revision');
     });
 
@@ -200,7 +200,7 @@ describe('persistence', () => {
 
 describe('restore', () => {
     it('resumes a running timer against a single clock sample', () => {
-        const endsAt = EXAM_START.getTime() + 20 * 60_000;
+        const endsAt = examStart.getTime() + 20 * 60_000;
         seed([{ ...idleSession, timer: { status: 'running', endsAt } }]);
 
         expect(timerOf('reading')).toEqual({ status: 'running', endsAt });
@@ -208,25 +208,25 @@ describe('restore', () => {
     });
 
     it('clamps a timer that outlives its component and raises the clock-jump flag', () => {
-        const endsAt = EXAM_START.getTime() + 5 * 60 * 60_000;
+        const endsAt = examStart.getTime() + 5 * 60 * 60_000;
         seed([{ ...idleSession, timer: { status: 'running', endsAt } }]);
 
         expect(timerOf('reading')).toEqual({
             status: 'running',
-            endsAt: EXAM_START.getTime() + READING_MS,
+            endsAt: examStart.getTime() + readingMilliseconds,
         });
         expect(getSnapshot().clockJumpDetected).toBe(true);
     });
 
     it('keeps a paused session that fits inside its component', () => {
-        seed([{ ...idleSession, timer: { status: 'paused', remainingMs: READING_MS } }]);
+        seed([{ ...idleSession, timer: { status: 'paused', remainingMs: readingMilliseconds } }]);
 
-        expect(timerOf('reading')).toEqual({ status: 'paused', remainingMs: READING_MS });
+        expect(timerOf('reading')).toEqual({ status: 'paused', remainingMs: readingMilliseconds });
         expect(getSnapshot().restoreDiscarded).toBe(false);
     });
 
     it('keeps a break that has run into overtime', () => {
-        const endsAt = EXAM_START.getTime() - 3 * 60_000;
+        const endsAt = examStart.getTime() - 3 * 60_000;
         seed([idleSession], { status: 'running', endsAt });
 
         expect(getSnapshot().break.timer).toEqual({ status: 'running', endsAt });
@@ -235,17 +235,17 @@ describe('restore', () => {
 
     it('clamps a far-future expiry instead of scheduling an overflowing timeout', () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
-        const endsAt = EXAM_START.getTime() + 60 * 24 * 60 * 60_000;
+        const endsAt = examStart.getTime() + 60 * 24 * 60 * 60_000;
 
         seed([idleSession], { status: 'running', endsAt });
 
         const scheduledDelays = setTimeoutSpy.mock.calls.map(([, delay]) => delay ?? 0);
-        expect(Math.max(...scheduledDelays)).toBe(MAX_TIMEOUT_DELAY_MS);
+        expect(Math.max(...scheduledDelays)).toBe(maxTimeoutDelayMilliseconds);
 
         setTimeoutSpy.mockClear();
-        vi.advanceTimersByTime(MAX_TIMEOUT_DELAY_MS);
+        vi.advanceTimersByTime(maxTimeoutDelayMilliseconds);
 
-        expect(setTimeoutSpy.mock.calls.map(([, delay]) => delay)).toEqual([MAX_TIMEOUT_DELAY_MS]);
+        expect(setTimeoutSpy.mock.calls.map(([, delay]) => delay)).toEqual([maxTimeoutDelayMilliseconds]);
         expect(getSnapshot().break.timer).toEqual({ status: 'running', endsAt });
     });
 
@@ -278,7 +278,7 @@ describe('restore', () => {
             storedBoard([idleSession], { status: 'paused', remainingMs: 999_999_999 }),
         ],
     ])('discards %s and reports it', (_scenario, payload) => {
-        localStorage.setItem(STORAGE_KEY, payload);
+        localStorage.setItem(storageKey, payload);
 
         expect(() => {
             hydrateFromStorage();
@@ -295,8 +295,8 @@ describe('cross-tab sync', () => {
         const unsubscribe = subscribe(listener);
         const before = getSnapshot();
 
-        localStorage.setItem(STORAGE_KEY, storedBoard([idleSession]));
-        window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+        localStorage.setItem(storageKey, storedBoard([idleSession]));
+        window.dispatchEvent(new StorageEvent('storage', { key: storageKey }));
 
         expect(listener).toHaveBeenCalledTimes(1);
         expect(Object.is(before, getSnapshot())).toBe(false);
@@ -309,8 +309,8 @@ describe('cross-tab sync', () => {
         const unsubscribe = subscribe(vi.fn());
         setClockJumpDetected(true);
 
-        localStorage.setItem(STORAGE_KEY, storedBoard([{ ...idleSession, id: 'writing' }]));
-        window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+        localStorage.setItem(storageKey, storedBoard([{ ...idleSession, id: 'writing' }]));
+        window.dispatchEvent(new StorageEvent('storage', { key: storageKey }));
 
         expect(getSnapshot().sessions.map((session) => session.id)).toEqual(['writing']);
         expect(getSnapshot().clockJumpDetected).toBe(true);
@@ -328,8 +328,8 @@ describe('cross-tab sync', () => {
         expect(getSnapshot().persistFailed).toBe(true);
 
         setItem.mockRestore();
-        localStorage.setItem(STORAGE_KEY, storedBoard([idleSession]));
-        window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+        localStorage.setItem(storageKey, storedBoard([idleSession]));
+        window.dispatchEvent(new StorageEvent('storage', { key: storageKey }));
 
         expect(getSnapshot().persistFailed).toBe(true);
         unsubscribe();
@@ -505,11 +505,11 @@ describe('session duration', () => {
     });
 
     it("adds the extra minutes to the component's own minutes", () => {
-        expect(sessionDurationMs(readingSession({ extraMinutes: 19 }))).toBe((75 + 19) * 60_000);
+        expect(sessionDurationMilliseconds(readingSession({ extraMinutes: 19 }))).toBe((75 + 19) * 60_000);
     });
 
     it('is zero for a session whose component no longer exists', () => {
-        expect(sessionDurationMs(readingSession({ partIndex: 9 }))).toBe(0);
+        expect(sessionDurationMilliseconds(readingSession({ partIndex: 9 }))).toBe(0);
     });
 });
 
@@ -525,7 +525,7 @@ const remainingOf = (id: string): number => {
     if (timer === undefined) {
         throw new Error(`No session ${id}`);
     }
-    return remainingMs(timer, Date.now());
+    return remainingMilliseconds(timer, Date.now());
 };
 
 describe('granting extra time part way through a component', () => {
@@ -580,7 +580,7 @@ describe('granting extra time part way through a component', () => {
         setSessionConfig('reading', { ...readingConfig, extraMinutes: 25 });
 
         expect(timerOf('reading')).toEqual({ status: 'idle' });
-        expect(sessionDurationMs(sessionOf('reading')!)).toBe(100 * 60_000);
+        expect(sessionDurationMilliseconds(sessionOf('reading')!)).toBe(100 * 60_000);
     });
 });
 
@@ -602,7 +602,7 @@ describe('stored state that would break the board', () => {
 
     it('rejects a break longer than the allowed maximum', () => {
         localStorage.setItem(
-            STORAGE_KEY,
+            storageKey,
             JSON.stringify({
                 centreNumber: 'ES432',
                 sessions: [],
@@ -616,7 +616,7 @@ describe('stored state that would break the board', () => {
 
     it('rejects a fractional break length', () => {
         localStorage.setItem(
-            STORAGE_KEY,
+            storageKey,
             JSON.stringify({
                 centreNumber: 'ES432',
                 sessions: [],
@@ -639,7 +639,7 @@ describe('compensating for a system clock step', () => {
         vi.setSystemTime(Date.now() - 60 * 60_000);
 
         expect(remainingOf('reading')).toBe(before);
-        expect(localStorage.getItem(STORAGE_KEY)).toContain(String(endsAtOf('reading')));
+        expect(localStorage.getItem(storageKey)).toContain(String(endsAtOf('reading')));
     });
 
     it('says nothing when no exam is running', () => {
@@ -699,6 +699,17 @@ describe('reordering the columns', () => {
 
         moveSession('b', -5);
         expect(order()).toEqual(['b', 'a', 'c']);
+    });
+
+    it('leaves the board untouched when a clamped target is the place the column already holds', () => {
+        seed(three);
+        const revision = getSnapshot().revision;
+
+        moveSession('a', -1);
+        moveSession('c', 99);
+
+        expect(order()).toEqual(['a', 'b', 'c']);
+        expect(getSnapshot().revision).toBe(revision);
     });
 
     it('does nothing for an unknown session or a move to its own place', () => {

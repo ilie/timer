@@ -1,16 +1,16 @@
 import { renderHook } from '@testing-library/react';
 import { StrictMode } from 'react';
 import type { ReactNode } from 'react';
-import { CLOCK_JUMP_SAMPLE_MS } from '../config/timing';
-import { STORAGE_KEY } from '../config/storage';
-import { remainingMs } from '../lib/timer';
+import { clockJumpSampleMilliseconds } from '../config/timing';
+import { storageKey } from '../config/storage';
+import { remainingMilliseconds } from '../lib/timer';
 import type { TimerState } from '../lib/timer';
 import { getSnapshot, hydrateFromStorage, setClockJumpDetected, startSession } from '../store/boardStore';
 import { useClockJump } from './useClockJump';
 
-const CLOCK_START = new Date('2026-06-11T09:00:00.000Z');
-const HOUR = 60 * 60_000;
-const READING_MS = 75 * 60_000;
+const clockStart = new Date('2026-06-11T09:00:00.000Z');
+const hourMilliseconds = 60 * 60_000;
+const readingMilliseconds = 75 * 60_000;
 
 let monotonicNow = 0;
 
@@ -26,7 +26,7 @@ const renderClockJump = () =>
 
 const seedRunningSession = (): void => {
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({
             centreNumber: 'ES432',
             sessions: [
@@ -62,22 +62,22 @@ const setVisibility = (state: 'visible' | 'hidden'): void => {
     document.dispatchEvent(new Event('visibilitychange'));
 };
 
-/** One sampler interval passes, with the wall clock stepping by `stepMs`. */
-const sampleWithWallStep = (stepMs: number): void => {
-    monotonicNow += CLOCK_JUMP_SAMPLE_MS;
-    vi.setSystemTime(Date.now() + stepMs);
-    vi.advanceTimersByTime(CLOCK_JUMP_SAMPLE_MS);
+/** One sampler interval passes, with the wall clock stepping by `stepMilliseconds`. */
+const sampleWithWallStep = (stepMilliseconds: number): void => {
+    monotonicNow += clockJumpSampleMilliseconds;
+    vi.setSystemTime(Date.now() + stepMilliseconds);
+    vi.advanceTimersByTime(clockJumpSampleMilliseconds);
 };
 
 /** One sampler interval where the monotonic clock stood still, as after a suspend. */
-const sampleWithoutMonotonicProgress = (gapMs: number): void => {
-    vi.setSystemTime(Date.now() + gapMs);
-    vi.advanceTimersByTime(CLOCK_JUMP_SAMPLE_MS);
+const sampleWithoutMonotonicProgress = (gapMilliseconds: number): void => {
+    vi.setSystemTime(Date.now() + gapMilliseconds);
+    vi.advanceTimersByTime(clockJumpSampleMilliseconds);
 };
 
 beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(CLOCK_START);
+    vi.setSystemTime(clockStart);
     monotonicNow = 0;
     vi.spyOn(performance, 'now').mockImplementation(() => monotonicNow);
     setVisibility('visible');
@@ -97,12 +97,14 @@ describe('a clock step while an exam is running', () => {
         seedRunningSession();
         const { unmount } = renderClockJump();
 
-        sampleWithWallStep(-HOUR);
+        sampleWithWallStep(-hourMilliseconds);
 
         // The candidate has used only the five seconds the sampler actually measured.
-        expect(remainingMs(timerOf('reading'), Date.now())).toBe(READING_MS - CLOCK_JUMP_SAMPLE_MS);
+        expect(remainingMilliseconds(timerOf('reading'), Date.now())).toBe(
+            readingMilliseconds - clockJumpSampleMilliseconds,
+        );
         expect(getSnapshot().clockTimesPreserved).toBe(true);
-        expect(getSnapshot().clockSkewMs).toBe(-HOUR);
+        expect(getSnapshot().clockSkewMilliseconds).toBe(-hourMilliseconds);
         unmount();
     });
 
@@ -110,9 +112,11 @@ describe('a clock step while an exam is running', () => {
         seedRunningSession();
         const { unmount } = renderClockJump();
 
-        sampleWithWallStep(HOUR);
+        sampleWithWallStep(hourMilliseconds);
 
-        expect(remainingMs(timerOf('reading'), Date.now())).toBe(READING_MS - CLOCK_JUMP_SAMPLE_MS);
+        expect(remainingMilliseconds(timerOf('reading'), Date.now())).toBe(
+            readingMilliseconds - clockJumpSampleMilliseconds,
+        );
         expect(getSnapshot().clockTimesPreserved).toBe(true);
         unmount();
     });
@@ -121,9 +125,9 @@ describe('a clock step while an exam is running', () => {
         seedRunningSession();
         const { unmount } = renderClockJump();
 
-        sampleWithWallStep(2 * HOUR);
+        sampleWithWallStep(2 * hourMilliseconds);
 
-        expect(remainingMs(timerOf('reading'), Date.now())).toBeGreaterThan(0);
+        expect(remainingMilliseconds(timerOf('reading'), Date.now())).toBeGreaterThan(0);
         unmount();
     });
 
@@ -131,7 +135,7 @@ describe('a clock step while an exam is running', () => {
         seedRunningSession();
         const { unmount } = renderClockJump();
 
-        sampleWithWallStep(-HOUR);
+        sampleWithWallStep(-hourMilliseconds);
         expect(getSnapshot().clockJumpDetected).toBe(true);
 
         sampleWithWallStep(0);
@@ -162,7 +166,7 @@ describe('a gap we cannot account for', () => {
 
         setVisibility('hidden');
         setVisibility('visible');
-        sampleWithWallStep(-HOUR);
+        sampleWithWallStep(-hourMilliseconds);
 
         expect(timerOf('reading')).toEqual(before);
         expect(getSnapshot().clockTimesPreserved).toBe(false);
@@ -174,7 +178,7 @@ describe('staying quiet when there is nothing to protect', () => {
     it('says nothing about a clock step when no exam is running', () => {
         const { unmount } = renderClockJump();
 
-        sampleWithWallStep(-HOUR);
+        sampleWithWallStep(-hourMilliseconds);
 
         expect(getSnapshot().clockJumpDetected).toBe(false);
         unmount();
@@ -185,7 +189,7 @@ describe('staying quiet when there is nothing to protect', () => {
         const { unmount } = renderClockJump();
 
         unmount();
-        sampleWithWallStep(-HOUR);
+        sampleWithWallStep(-hourMilliseconds);
 
         expect(getSnapshot().clockJumpDetected).toBe(false);
     });

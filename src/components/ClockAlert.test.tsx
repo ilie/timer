@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ClockAlert } from './ClockAlert';
-import { STORAGE_KEY } from '../config/storage';
+import { storageKey } from '../config/storage';
 import {
     applyClockStep,
     hydrateFromStorage,
@@ -10,24 +10,24 @@ import {
     startSession,
 } from '../store/boardStore';
 
+const storedBoard = (timer: unknown): string =>
+    JSON.stringify({
+        centreNumber: 'ES432',
+        sessions: [
+            {
+                id: 'reading',
+                examName: 'B2 First',
+                partIndex: 0,
+                mode: 'paper',
+                extraMinutes: 0,
+                timer,
+            },
+        ],
+        break: { timer: { status: 'idle' }, minutes: 15 },
+    });
+
 const seedRunningSession = (): void => {
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-            centreNumber: 'ES432',
-            sessions: [
-                {
-                    id: 'reading',
-                    examName: 'B2 First',
-                    partIndex: 0,
-                    mode: 'paper',
-                    extraMinutes: 0,
-                    timer: { status: 'idle' },
-                },
-            ],
-            break: { timer: { status: 'idle' }, minutes: 15 },
-        }),
-    );
+    localStorage.setItem(storageKey, storedBoard({ status: 'idle' }));
     hydrateFromStorage();
     startSession('reading');
 };
@@ -70,6 +70,30 @@ describe('the clock warning the invigilator sees', () => {
         const alert = screen.getByRole('alert');
         expect(alert).toHaveTextContent('10min forward');
         expect(alert).toHaveTextContent('Check the times below');
+    });
+
+    it('reads as one sentence with the skew set into it', () => {
+        seedRunningSession();
+        applyClockStep(-60 * 60_000);
+
+        render(<ClockAlert />);
+
+        expect(screen.getByRole('alert').textContent).toBe(
+            'The system clock moved 1h back. The times below were adjusted to match and are still correct.',
+        );
+    });
+
+    it('warns without a skew when a restored deadline had to be cut back', () => {
+        // A deadline further away than the component is long means the clock moved
+        // while the board was closed, by an amount nobody can measure afterwards.
+        localStorage.setItem(storageKey, storedBoard({ status: 'running', endsAt: Date.now() + 10 * 60 * 60_000 }));
+        hydrateFromStorage();
+
+        render(<ClockAlert />);
+
+        expect(screen.getByRole('alert').textContent).toBe(
+            'The system clock changed. Check the times below against a clock you trust before relying on them.',
+        );
     });
 
     it('can be dismissed once the invigilator has seen it', async () => {

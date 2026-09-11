@@ -1,21 +1,22 @@
-import { MAX_SESSIONS } from '../config/board';
+import { maxSessions } from '../config/board';
 import { examByName } from '../config/exams';
-import { MS_PER_MINUTE } from '../lib/time';
+import { millisecondsPerMinute } from '../lib/time';
 import { extend, pause, reanchor, reset, resume, start } from '../lib/timer';
 import type { TimerState } from '../lib/timer';
 import { applySnapshot, commit, getSnapshot } from './boardState';
 import type { BoardState } from './boardState';
-import { sessionDurationMs } from './session';
+import { sessionDurationMilliseconds } from './session';
 import type { Session, SessionConfig } from './session';
 
 export type { BoardState } from './boardState';
 export type { BreakState, Session, SessionConfig } from './session';
-export { sessionDurationMs };
+export { sessionDurationMilliseconds };
 export { getClockSnapshot, getSnapshot, hydrateFromStorage, subscribe } from './boardState';
 
 const replaceSession = (id: string, replacement: (session: Session) => Session): void => {
+    const state = getSnapshot();
     let changed = false;
-    const sessions = getSnapshot().sessions.map((session) => {
+    const sessions = state.sessions.map((session) => {
         if (session.id !== id) {
             return session;
         }
@@ -29,7 +30,7 @@ const replaceSession = (id: string, replacement: (session: Session) => Session):
     if (!changed) {
         return;
     }
-    commit({ ...getSnapshot(), sessions });
+    commit({ ...state, sessions });
 };
 
 const updateSessionTimer = (id: string, nextTimer: (session: Session, now: number) => TimerState): void => {
@@ -42,7 +43,7 @@ const updateSessionTimer = (id: string, nextTimer: (session: Session, now: numbe
 
 export const startSession = (id: string): void => {
     updateSessionTimer(id, (session, now) =>
-        session.timer.status === 'running' ? session.timer : start(sessionDurationMs(session), now),
+        session.timer.status === 'running' ? session.timer : start(sessionDurationMilliseconds(session), now),
     );
 };
 
@@ -68,55 +69,56 @@ const unusedSessionId = (sessions: readonly Session[]): string => {
 };
 
 export const addSession = (config: SessionConfig): void => {
-    if (getSnapshot().sessions.length >= MAX_SESSIONS) {
+    const state = getSnapshot();
+    if (state.sessions.length >= maxSessions) {
         return;
     }
     const session: Session = {
-        id: unusedSessionId(getSnapshot().sessions),
+        id: unusedSessionId(state.sessions),
         ...config,
         timer: reset(),
     };
-    commit({ ...getSnapshot(), sessions: [...getSnapshot().sessions, session] });
+    commit({ ...state, sessions: [...state.sessions, session] });
 };
 
 export const removeSession = (id: string): void => {
-    const sessions = getSnapshot().sessions.filter((session) => session.id !== id);
-    if (sessions.length === getSnapshot().sessions.length) {
+    const state = getSnapshot();
+    const sessions = state.sessions.filter((session) => session.id !== id);
+    if (sessions.length === state.sessions.length) {
         return;
     }
-    commit({ ...getSnapshot(), sessions });
+    commit({ ...state, sessions });
 };
 
 /** Reorders the columns. Timers travel with their session untouched. */
 export const moveSession = (id: string, toIndex: number): void => {
-    const from = getSnapshot().sessions.findIndex((session) => session.id === id);
+    const state = getSnapshot();
+    const from = state.sessions.findIndex((session) => session.id === id);
     if (from === -1) {
         return;
     }
-    const to = Math.max(0, Math.min(toIndex, getSnapshot().sessions.length - 1));
+    const to = Math.max(0, Math.min(toIndex, state.sessions.length - 1));
     if (to === from) {
         return;
     }
-    const sessions = [...getSnapshot().sessions];
+    const sessions = [...state.sessions];
     const [moved] = sessions.splice(from, 1);
     if (moved === undefined) {
         return;
     }
     sessions.splice(to, 0, moved);
-    commit({ ...getSnapshot(), sessions });
+    commit({ ...state, sessions });
 };
 
+/** The same component of the same exam, in the same format: only the extra time may differ. */
+const isSameComponent = (session: Session, config: SessionConfig): boolean =>
+    session.examName === config.examName && session.partIndex === config.partIndex && session.mode === config.mode;
+
 const matchesConfig = (session: Session, config: SessionConfig): boolean =>
-    session.examName === config.examName &&
-    session.partIndex === config.partIndex &&
-    session.mode === config.mode &&
-    session.extraMinutes === config.extraMinutes;
+    isSameComponent(session, config) && session.extraMinutes === config.extraMinutes;
 
 const onlyExtraMinutesDiffer = (session: Session, config: SessionConfig): boolean =>
-    session.examName === config.examName &&
-    session.partIndex === config.partIndex &&
-    session.mode === config.mode &&
-    session.extraMinutes !== config.extraMinutes;
+    isSameComponent(session, config) && session.extraMinutes !== config.extraMinutes;
 
 /**
  * Re-configuring a session normally re-seeds its timer, because a different
@@ -130,18 +132,19 @@ export const setSessionConfig = (id: string, config: SessionConfig): void => {
             return session;
         }
         if (session.timer.status !== 'idle' && onlyExtraMinutesDiffer(session, config)) {
-            const deltaMs = (config.extraMinutes - session.extraMinutes) * MS_PER_MINUTE;
-            return { ...session, ...config, timer: extend(session.timer, deltaMs) };
+            const deltaMilliseconds = (config.extraMinutes - session.extraMinutes) * millisecondsPerMinute;
+            return { ...session, ...config, timer: extend(session.timer, deltaMilliseconds) };
         }
         return { ...session, ...config, timer: reset() };
     });
 };
 
 export const setCentreNumber = (centreNumber: string): void => {
-    if (getSnapshot().centreNumber === centreNumber) {
+    const state = getSnapshot();
+    if (state.centreNumber === centreNumber) {
         return;
     }
-    commit({ ...getSnapshot(), centreNumber });
+    commit({ ...state, centreNumber });
 };
 
 export const advanceComponent = (id: string): void => {
@@ -161,20 +164,21 @@ const hasRunningTimer = (state: BoardState): boolean =>
  * The wall clock moved by a known amount while we were demonstrably running, so
  * every running deadline moves with it and the time remaining is untouched.
  */
-export const applyClockStep = (skewMs: number): void => {
-    if (!hasRunningTimer(getSnapshot())) {
+export const applyClockStep = (skewMilliseconds: number): void => {
+    const state = getSnapshot();
+    if (!hasRunningTimer(state)) {
         return;
     }
-    const sessions = getSnapshot().sessions.map((session) => {
-        const timer = reanchor(session.timer, skewMs);
+    const sessions = state.sessions.map((session) => {
+        const timer = reanchor(session.timer, skewMilliseconds);
         return timer === session.timer ? session : { ...session, timer };
     });
     commit({
-        ...getSnapshot(),
+        ...state,
         sessions,
-        break: { ...getSnapshot().break, timer: reanchor(getSnapshot().break.timer, skewMs) },
+        break: { ...state.break, timer: reanchor(state.break.timer, skewMilliseconds) },
         clockJumpDetected: true,
-        clockSkewMs: skewMs,
+        clockSkewMilliseconds: skewMilliseconds,
         clockTimesPreserved: true,
     });
 };
@@ -183,26 +187,28 @@ export const applyClockStep = (skewMs: number): void => {
  * The clocks disagree but we cannot prove why, so nothing is adjusted and the
  * invigilator is asked to check the board against a trusted clock.
  */
-export const reportUnverifiedClockJump = (skewMs: number): void => {
-    if (!hasRunningTimer(getSnapshot())) {
+export const reportUnverifiedClockJump = (skewMilliseconds: number): void => {
+    const state = getSnapshot();
+    if (!hasRunningTimer(state)) {
         return;
     }
     applySnapshot({
-        ...getSnapshot(),
+        ...state,
         clockJumpDetected: true,
-        clockSkewMs: skewMs,
+        clockSkewMilliseconds: skewMilliseconds,
         clockTimesPreserved: false,
     });
 };
 
 export const setClockJumpDetected = (detected: boolean): void => {
-    if (getSnapshot().clockJumpDetected === detected) {
+    const state = getSnapshot();
+    if (state.clockJumpDetected === detected) {
         return;
     }
     applySnapshot({
-        ...getSnapshot(),
+        ...state,
         clockJumpDetected: detected,
-        clockSkewMs: detected ? getSnapshot().clockSkewMs : 0,
-        clockTimesPreserved: detected ? getSnapshot().clockTimesPreserved : false,
+        clockSkewMilliseconds: detected ? state.clockSkewMilliseconds : 0,
+        clockTimesPreserved: detected ? state.clockTimesPreserved : false,
     });
 };

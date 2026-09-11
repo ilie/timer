@@ -1,5 +1,5 @@
 import { examByName } from '../config/exams';
-import { sessionDurationMs } from '../store/session';
+import { sessionDurationMilliseconds } from '../store/session';
 import type { Session } from '../store/session';
 import { composeExamLabel, examDisplayName, formatAllowedTime, marksDigitalMode, partLabel } from './format';
 import type { Density } from './format';
@@ -13,16 +13,17 @@ export type SessionView = {
     examName: string;
     digital: boolean;
     partName: string;
+    /** The exam's own allowed time for this component, with any extra time shown beside it. */
     allowedTime: string;
     extraMinutes: number;
     countsDown: boolean;
     timer: TimerState;
-    durationMs: number;
+    durationMilliseconds: number;
     status: TimerStatus;
     nextPartName: string | null;
 };
 
-const NOT_APPLICABLE = '—';
+const notApplicable = '—';
 
 function unconfiguredView(session: Session): SessionView {
     return {
@@ -30,12 +31,12 @@ function unconfiguredView(session: Session): SessionView {
         examLabel: 'Not configured',
         examName: 'Not configured',
         digital: session.mode === 'digital',
-        partName: NOT_APPLICABLE,
-        allowedTime: NOT_APPLICABLE,
+        partName: notApplicable,
+        allowedTime: notApplicable,
         extraMinutes: session.extraMinutes,
         countsDown: false,
         timer: session.timer,
-        durationMs: 0,
+        durationMilliseconds: 0,
         status: 'idle',
         nextPartName: null,
     };
@@ -57,11 +58,11 @@ export function describeSession(session: Session, density: Density, now: number)
         examName: examDisplayName(exam, density),
         digital: marksDigitalMode(exam, session.mode),
         partName: partLabel(part.name, density),
-        allowedTime: formatAllowedTime(part.minutes + session.extraMinutes, part.qualifier),
+        allowedTime: formatAllowedTime(part.minutes, part.qualifier),
         extraMinutes: session.extraMinutes,
         countsDown: part.qualifier === 'exact' && session.mode === 'paper',
         timer: session.timer,
-        durationMs: sessionDurationMs(session),
+        durationMilliseconds: sessionDurationMilliseconds(session),
         status: statusOf(session.timer, now),
         nextPartName: nextPart === undefined ? null : partLabel(nextPart.name, density),
     };

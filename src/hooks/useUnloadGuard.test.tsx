@@ -2,16 +2,16 @@ import { render } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Board } from '../components/Board';
-import { STORAGE_KEY } from '../config/storage';
+import { storageKey } from '../config/storage';
 import { hydrateFromStorage } from '../store/boardStore';
 
-const EXAM_START = new Date('2026-06-11T09:00:00.000Z');
+const examStart = new Date('2026-06-11T09:00:00.000Z');
 
 const noRequest = (): void => {};
 
-const seedRunningSession = (endsInMs: number): void => {
+const seedRunningSession = (endsInMilliseconds: number): void => {
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({
             centreNumber: 'ES432',
             sessions: [
@@ -21,7 +21,7 @@ const seedRunningSession = (endsInMs: number): void => {
                     partIndex: 0,
                     mode: 'paper',
                     extraMinutes: 0,
-                    timer: { status: 'running', endsAt: EXAM_START.getTime() + endsInMs },
+                    timer: { status: 'running', endsAt: examStart.getTime() + endsInMilliseconds },
                 },
             ],
             break: { timer: { status: 'idle' }, minutes: 15 },
@@ -36,7 +36,7 @@ const callsFor = (spy: ListenerSpy): number => spy.mock.calls.filter((call) => c
 
 beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(EXAM_START);
+    vi.setSystemTime(examStart);
     localStorage.clear();
     hydrateFromStorage();
 });

@@ -2,19 +2,19 @@ import { render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RemainingTime } from './RemainingTime';
-import { STORAGE_KEY } from '../config/storage';
+import { storageKey } from '../config/storage';
 import { formatRemaining } from '../lib/format';
-import { remainingMs } from '../lib/timer';
+import { remainingMilliseconds } from '../lib/timer';
 import type { TimerState } from '../lib/timer';
 import { getSnapshot, hydrateFromStorage, startSession } from '../store/boardStore';
 
-const EXAM_START = new Date('2026-06-11T09:00:00.000Z');
-const READING_MS = 75 * 60_000;
-const TEN_MINUTES_MS = 10 * 60_000;
+const examStart = new Date('2026-06-11T09:00:00.000Z');
+const readingMilliseconds = 75 * 60_000;
+const tenMinutesMilliseconds = 10 * 60_000;
 
 const seedIdleReadingSession = (): void => {
     localStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({
             centreNumber: 'ES432',
             sessions: [
@@ -41,9 +41,9 @@ const runningTimerOf = (id: string): TimerState => {
     return timer;
 };
 
-const advance = (ms: number): void => {
+const advance = (milliseconds: number): void => {
     act(() => {
-        vi.advanceTimersByTime(ms);
+        vi.advanceTimersByTime(milliseconds);
     });
 };
 
@@ -60,7 +60,7 @@ const reservedRenderings = (): string[] =>
 
 beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(EXAM_START);
+    vi.setSystemTime(examStart);
     localStorage.clear();
     hydrateFromStorage();
 });
@@ -77,7 +77,7 @@ describe('anchoring', () => {
         const timer = runningTimerOf('reading');
 
         expect(timer.status).toBe('running');
-        expect(timer.status === 'running' && timer.endsAt - Date.now()).toBe(READING_MS);
+        expect(timer.status === 'running' && timer.endsAt - Date.now()).toBe(readingMilliseconds);
     });
 
     it('loses nothing to drift over ten minutes of ticks', () => {
@@ -85,31 +85,31 @@ describe('anchoring', () => {
         startSession('reading');
         const timer = runningTimerOf('reading');
 
-        render(<RemainingTime label={null} timer={timer} durationMs={READING_MS} />);
+        render(<RemainingTime label={null} timer={timer} durationMilliseconds={readingMilliseconds} />);
 
-        advance(TEN_MINUTES_MS);
+        advance(tenMinutesMilliseconds);
 
-        expect(remainingMs(timer, Date.now())).toBe(READING_MS - 600_000);
-        expect(renderedRemaining()).toBe(formatRemaining(READING_MS - 600_000));
+        expect(remainingMilliseconds(timer, Date.now())).toBe(readingMilliseconds - 600_000);
+        expect(renderedRemaining()).toBe(formatRemaining(readingMilliseconds - 600_000));
     });
 
     it('shows the whole allowed time while the session is idle', () => {
-        render(<RemainingTime label={null} timer={{ status: 'idle' }} durationMs={READING_MS} />);
+        render(<RemainingTime label={null} timer={{ status: 'idle' }} durationMilliseconds={readingMilliseconds} />);
 
-        expect(renderedRemaining()).toBe(formatRemaining(READING_MS));
+        expect(renderedRemaining()).toBe(formatRemaining(readingMilliseconds));
     });
 });
 
 describe('width reservation', () => {
     it('reserves the same renderings whatever the value shows', () => {
-        const durationMs = 90 * 60_000;
-        const values = [durationMs, 600_000, 582_000, 0];
+        const durationMilliseconds = 90 * 60_000;
+        const values = [durationMilliseconds, 600_000, 582_000, 0];
         const reservations = values.map((remaining) => {
             const view = render(
                 <RemainingTime
                     label={null}
                     timer={{ status: 'running', endsAt: Date.now() + remaining }}
-                    durationMs={durationMs}
+                    durationMilliseconds={durationMilliseconds}
                 />,
             );
             const reserved = reservedRenderings();
@@ -124,13 +124,13 @@ describe('width reservation', () => {
     });
 
     it('marks each threshold on the countdown cell', () => {
-        const durationMs = 20 * 60_000;
+        const durationMilliseconds = 20 * 60_000;
         const states = [11 * 60_000, 10 * 60_000, 5 * 60_000, 0].map((remaining) => {
             const view = render(
                 <RemainingTime
                     label={null}
                     timer={{ status: 'running', endsAt: Date.now() + remaining }}
-                    durationMs={durationMs}
+                    durationMilliseconds={durationMilliseconds}
                 />,
             );
             const state = document.querySelector('[data-state]')?.getAttribute('data-state');
@@ -146,33 +146,35 @@ describe('width reservation', () => {
 describe('never counting upward', () => {
     it('never shows more than the allowed time when a stale sample meets a fresh start', () => {
         seedIdleReadingSession();
-        const view = render(<RemainingTime label={null} timer={{ status: 'idle' }} durationMs={READING_MS} />);
+        const view = render(
+            <RemainingTime label={null} timer={{ status: 'idle' }} durationMilliseconds={readingMilliseconds} />,
+        );
 
         expect(renderedRemaining()).toBe('1h 15min 00sec');
 
         act(() => {
-            vi.setSystemTime(EXAM_START.getTime() + 200);
+            vi.setSystemTime(examStart.getTime() + 200);
         });
         startSession('reading');
         const started = runningTimerOf('reading');
 
-        view.rerender(<RemainingTime label={null} timer={started} durationMs={READING_MS} />);
+        view.rerender(<RemainingTime label={null} timer={started} durationMilliseconds={readingMilliseconds} />);
 
         expect(renderedRemaining()).toBe('1h 15min 00sec');
     });
 
     it('never ticks upward across a run', () => {
-        const durationMs = 12 * 60_000;
-        const timer: TimerState = { status: 'running', endsAt: Date.now() + durationMs };
-        render(<RemainingTime label={null} timer={timer} durationMs={durationMs} />);
+        const durationMilliseconds = 12 * 60_000;
+        const timer: TimerState = { status: 'running', endsAt: Date.now() + durationMilliseconds };
+        render(<RemainingTime label={null} timer={timer} durationMilliseconds={durationMilliseconds} />);
 
-        let previous = remainingMs(timer, Date.now());
+        let previous = remainingMilliseconds(timer, Date.now());
         for (let step = 0; step < 4 * 60; step += 1) {
             advance(250);
-            const current = remainingMs(timer, Date.now());
+            const current = remainingMilliseconds(timer, Date.now());
             expect(current).toBeLessThanOrEqual(previous);
             previous = current;
-            expect(renderedRemaining()).toBe(formatRemaining(Math.min(current, durationMs)));
+            expect(renderedRemaining()).toBe(formatRemaining(Math.min(current, durationMilliseconds)));
         }
     });
 });

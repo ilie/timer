@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { exams } from '../config/exams';
 import type { Exam } from '../config/exams';
 import {
-    MAX_REMAINING_MS,
+    maxRemainingMilliseconds,
     composeExamLabel,
     densityFor,
     formatAllowedTime,
@@ -39,28 +39,28 @@ describe('formatAllowedTime', () => {
     });
 });
 
-const DIGIT_WIDTH = 0.6;
-const LETTER_WIDTH = 0.55;
-const SPACE_WIDTH = 0.28;
-const SMALL_SCALE = 0.5;
+const digitWidth = 0.6;
+const letterWidth = 0.55;
+const spaceWidth = 0.28;
+const smallScale = 0.5;
 
 const characterWidth = (character: string): number => {
     if (character === ' ') {
-        return SPACE_WIDTH;
+        return spaceWidth;
     }
-    return /\d/.test(character) ? DIGIT_WIDTH : LETTER_WIDTH;
+    return /\d/.test(character) ? digitWidth : letterWidth;
 };
 
 const renderedWidth = (segments: readonly RemainingSegment[]): number =>
     segments.reduce((total, segment) => {
-        const scale = segment.scale === 'full' ? 1 : SMALL_SCALE;
+        const scale = segment.scale === 'full' ? 1 : smallScale;
         return total + [...segment.text].reduce((run, character) => run + characterWidth(character), 0) * scale;
     }, 0);
 
 const segmentsRendering = (rendering: string): RemainingSegment[] => {
-    for (let ms = 0; ms <= MAX_REMAINING_MS; ms += 1000) {
-        if (formatRemaining(ms) === rendering) {
-            return remainingSegments(ms);
+    for (let milliseconds = 0; milliseconds <= maxRemainingMilliseconds; milliseconds += 1000) {
+        if (formatRemaining(milliseconds) === rendering) {
+            return remainingSegments(milliseconds);
         }
     }
     throw new Error(`No value renders ${rendering}`);
@@ -77,8 +77,8 @@ describe('formatRemaining', () => {
         [300_000, '5min 00sec'],
         [1, '0min 01sec'],
         [0, '0min 00sec'],
-    ])('formats %i ms as %s', (ms, expected) => {
-        expect(formatRemaining(ms)).toBe(expected);
+    ])('formats %i ms as %s', (milliseconds, expected) => {
+        expect(formatRemaining(milliseconds)).toBe(expected);
     });
 
     it('never understates the time left, rounding part seconds up', () => {
@@ -100,8 +100,8 @@ describe('formatRemaining', () => {
     it('reports a widest string no producible value renders wider than', () => {
         const reserved = renderedWidth(segmentsRendering(widestRemainingString()));
 
-        for (let ms = 0; ms <= MAX_REMAINING_MS; ms += 1000) {
-            expect(renderedWidth(remainingSegments(ms))).toBeLessThanOrEqual(reserved);
+        for (let milliseconds = 0; milliseconds <= maxRemainingMilliseconds; milliseconds += 1000) {
+            expect(renderedWidth(remainingSegments(milliseconds))).toBeLessThanOrEqual(reserved);
         }
     });
 });

@@ -14,7 +14,7 @@ function runningView(status: TimerStatus): SessionView {
         extraMinutes: 0,
         countsDown: true,
         timer: { status: 'running', endsAt: Date.now() + 60_000 },
-        durationMs: 90 * 60_000,
+        durationMilliseconds: 90 * 60_000,
         status,
         nextPartName: null,
     };
@@ -23,8 +23,7 @@ function runningView(status: TimerStatus): SessionView {
 const noop = () => {};
 
 describe('the run control on the board', () => {
-    // The board's own font sizes look like colour utilities to tailwind-merge.
-    // Unconfigured it drops text-white, leaving dark text on the dark button.
+    // A size class that reads as a colour would drop text-white and leave dark text here.
     it.each([
         ['idle', 'Start'],
         ['running', 'Pause'],

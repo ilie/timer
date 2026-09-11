@@ -1,4 +1,4 @@
-import { mergeClasses } from '../lib/mergeClasses';
+import { twMerge } from 'tailwind-merge';
 import type { ReactElement } from 'react';
 import { ChevronRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { Button } from './UI/Button';
@@ -11,10 +11,14 @@ type SessionControlsProps = {
     className?: string;
 };
 
-const runControlLabels = {
-    idle: 'Start',
-    running: 'Pause',
-    paused: 'Resume',
+/**
+ * The one button that drives the countdown, by the state it is in. Naming it,
+ * drawing it and acting on it are the same decision, so they are made once.
+ */
+const runControls = {
+    idle: { label: 'Start', Icon: Play, run: startSession },
+    running: { label: 'Pause', Icon: Pause, run: pauseSession },
+    paused: { label: 'Resume', Icon: Play, run: resumeSession },
 } as const;
 
 export function SessionControls({ view, onRequestReset, className }: SessionControlsProps): ReactElement | null {
@@ -22,23 +26,11 @@ export function SessionControls({ view, onRequestReset, className }: SessionCont
         return null;
     }
 
-    const runControlLabel = view.status === 'finished' ? null : runControlLabels[view.status];
+    const runControl = view.status === 'finished' ? null : runControls[view.status];
     const offersNextPart = view.status === 'finished' && view.nextPartName !== null;
 
-    function runControl() {
-        switch (view.status) {
-            case 'idle':
-                startSession(view.id);
-                return;
-            case 'running':
-                pauseSession(view.id);
-                return;
-            case 'paused':
-                resumeSession(view.id);
-                return;
-            case 'finished':
-                return;
-        }
+    function handleRunControl() {
+        runControl?.run(view.id);
     }
 
     function requestReset() {
@@ -50,27 +42,28 @@ export function SessionControls({ view, onRequestReset, className }: SessionCont
     }
 
     return (
-        <div className={mergeClasses('inline-flex flex-wrap items-center justify-center gap-3', className)}>
+        <div className={twMerge('inline-flex flex-wrap items-center justify-center gap-3', className)}>
             <Button
                 variant="quiet"
-                className="text-control min-w-[6em] rounded-full px-5 py-2.5"
+                className="control-text min-w-[6em] rounded-full px-5 py-2.5"
                 onClick={requestReset}
             >
                 <RotateCcw className="size-[1.15em]" strokeWidth={2.25} aria-hidden="true" />
                 Reset
             </Button>
-            {runControlLabel !== null && (
-                <Button className="text-control min-w-[7.5em] rounded-full px-6 py-2.5" onClick={runControl}>
-                    {view.status === 'running' ? (
-                        <Pause className="size-[1.15em]" fill="currentColor" strokeWidth={1.5} aria-hidden="true" />
-                    ) : (
-                        <Play className="size-[1.15em]" fill="currentColor" strokeWidth={1.5} aria-hidden="true" />
-                    )}
-                    {runControlLabel}
+            {runControl !== null && (
+                <Button className="control-text min-w-[7.5em] rounded-full px-6 py-2.5" onClick={handleRunControl}>
+                    <runControl.Icon
+                        className="size-[1.15em]"
+                        fill="currentColor"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                    />
+                    {runControl.label}
                 </Button>
             )}
             {offersNextPart && (
-                <Button className="text-control min-w-[7.5em] rounded-full px-6 py-2.5" onClick={advanceToNextPart}>
+                <Button className="control-text min-w-[7.5em] rounded-full px-6 py-2.5" onClick={advanceToNextPart}>
                     <ChevronRight className="size-[1.15em]" strokeWidth={2.5} aria-hidden="true" />
                     Next: {view.nextPartName}
                 </Button>
