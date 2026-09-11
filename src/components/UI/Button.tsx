@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactElement, Ref } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../../lib/mergeClasses';
 
 type ButtonVariant = 'primary' | 'destructive' | 'quiet' | 'ghost';
 
@@ -24,7 +24,7 @@ export function Button({ variant = 'primary', className, type = 'button', ...pro
     return (
         <button
             type={type}
-            className={twMerge(
+            className={mergeClasses(
                 'inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
                 variantClasses[variant],
                 className,

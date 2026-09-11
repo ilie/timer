@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useSyncExternalStore } from 'react';
 import { TriangleAlert, X } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { formatClockSkew } from '../lib/format';
 import { getSnapshot, setClockJumpDetected, subscribe } from '../store/boardStore';
@@ -33,7 +33,7 @@ export function ClockAlert({ className }: ClockAlertProps): ReactElement | null 
     return (
         <div
             role="alert"
-            className={twMerge(
+            className={mergeClasses(
                 'text-tab mx-8 mb-2 flex shrink-0 items-center gap-3 rounded-lg border-2 px-5 py-3',
                 timesPreserved
                     ? 'border-amber-700 bg-amber-50 text-amber-900'

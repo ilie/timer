@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../../lib/mergeClasses';
 import type { ReactElement } from 'react';
 import virginiaLyonsLogo from '../../Assets/img/Virginia_Lyons_H.svg';
 import cambridgeLogo from '../../Assets/img/Cambridge_Platinum_Centre_2023.svg';
@@ -9,7 +9,9 @@ type HeaderProps = {
 
 function Header({ className }: HeaderProps): ReactElement {
     return (
-        <header className={twMerge('flex shrink-0 items-center justify-between gap-8 bg-white px-8 py-2', className)}>
+        <header
+            className={mergeClasses('flex shrink-0 items-center justify-between gap-8 bg-white px-8 py-2', className)}
+        >
             {/* The board itself carries no heading, so this names the page for screen readers. */}
             <h1 className="sr-only">Exam countdown board — Virginia Lyons Exam Centre</h1>
             <img

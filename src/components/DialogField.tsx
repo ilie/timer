@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import type { ReactElement, ReactNode } from 'react';
 import { CircleAlert } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -43,7 +43,7 @@ type DialogHintProps = {
 };
 
 export function DialogHint({ children, className }: DialogHintProps): ReactElement {
-    return <p className={twMerge('text-linguaskill-slate-500 text-base', className)}>{children}</p>;
+    return <p className={mergeClasses('text-linguaskill-slate-500 text-base', className)}>{children}</p>;
 }
 
 export function DialogError({ id, children, className }: DialogErrorProps): ReactElement {
@@ -51,7 +51,10 @@ export function DialogError({ id, children, className }: DialogErrorProps): Reac
         <p
             id={id}
             role="alert"
-            className={twMerge('text-vlec-red-700 inline-flex items-center gap-2 text-base font-semibold', className)}
+            className={mergeClasses(
+                'text-vlec-red-700 inline-flex items-center gap-2 text-base font-semibold',
+                className,
+            )}
         >
             <CircleAlert className="size-[1em] shrink-0" aria-hidden="true" />
             {children}
@@ -63,7 +66,7 @@ function DialogLabel({ htmlFor, icon: LabelIcon, children, className }: DialogLa
     return (
         <label
             htmlFor={htmlFor}
-            className={twMerge(
+            className={mergeClasses(
                 'text-linguaskill-slate-700 inline-flex items-center gap-2 text-base font-medium',
                 className,
             )}
@@ -92,7 +95,7 @@ export function DialogField({
     const invalid = error !== null;
 
     return (
-        <div className={twMerge('flex flex-col gap-2', className)}>
+        <div className={mergeClasses('flex flex-col gap-2', className)}>
             {required ? (
                 <div className="flex items-baseline gap-2">
                     <DialogLabel htmlFor={id} icon={icon}>

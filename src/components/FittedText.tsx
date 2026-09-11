@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 
 type FittedTextProps = {
     /** Which measurement group this belongs to; `useBoardScale` reads both. */
@@ -16,7 +16,7 @@ export function FittedText({ measureAs, className, children }: FittedTextProps):
     return (
         <span
             data-fit={measureAs}
-            className={twMerge(
+            className={mergeClasses(
                 'inline-block align-middle text-[length:var(--board-value-size,1.75rem)] leading-none whitespace-nowrap',
                 className,
             )}

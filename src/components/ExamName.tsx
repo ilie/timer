@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Monitor } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 
 type ExamNameProps = {
     name: string;
@@ -25,7 +25,7 @@ type DigitalBadgeProps = {
 function DigitalBadge({ balancing = false, className }: DigitalBadgeProps): ReactElement {
     return (
         <span
-            className={twMerge(
+            className={mergeClasses(
                 'bg-vlec-red-700 inline-flex size-[0.72em] items-center justify-center overflow-hidden rounded-full align-baseline text-white',
                 balancing ? 'invisible mr-[0.3em]' : 'ml-[0.3em]',
                 className,

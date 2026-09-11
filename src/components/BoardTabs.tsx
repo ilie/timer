@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactElement, Ref } from 'react';
 import { Plus } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { SessionTab } from './SessionTab';
 import { MAX_SESSIONS } from '../config/board';
@@ -33,7 +33,7 @@ export function BoardTabs({
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
     return (
-        <thead ref={ref} className={twMerge('bg-vlec-blue-50', className)}>
+        <thead ref={ref} className={mergeClasses('bg-vlec-blue-50', className)}>
             <tr>
                 {labelLaneVisible ? null : <td className="p-0"></td>}
                 {columns.map((column, index) => (

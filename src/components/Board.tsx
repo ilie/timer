@@ -1,7 +1,7 @@
 import { useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 import { Pencil } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 import { BoardGrid } from './BoardGrid';
 import { EmptyBoard } from './EmptyBoard';
@@ -103,7 +103,7 @@ export function Board({ onAddSession, onEditSession, onEditCentreNumber, classNa
         <section
             ref={boardRef}
             tabIndex={-1}
-            className={twMerge('flex h-full min-h-0 w-full flex-col', className)}
+            className={mergeClasses('flex h-full min-h-0 w-full flex-col', className)}
             data-density={density}
             data-columns={columns.length}
         >

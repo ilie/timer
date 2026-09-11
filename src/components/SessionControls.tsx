@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import type { ReactElement } from 'react';
 import { ChevronRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { Button } from './UI/Button';
@@ -50,7 +50,7 @@ export function SessionControls({ view, onRequestReset, className }: SessionCont
     }
 
     return (
-        <div className={twMerge('inline-flex flex-wrap items-center justify-center gap-3', className)}>
+        <div className={mergeClasses('inline-flex flex-wrap items-center justify-center gap-3', className)}>
             <Button
                 variant="quiet"
                 className="text-control min-w-[6em] rounded-full px-5 py-2.5"

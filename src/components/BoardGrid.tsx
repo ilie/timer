@@ -1,5 +1,5 @@
 import type { ReactElement, Ref } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { BoardTabs } from './BoardTabs';
 import { boardRows, fillsCell } from './boardRows';
 import { FittedText } from './FittedText';
@@ -35,7 +35,11 @@ type RowLabelProps = {
 function RowLabel({ row, visible, className }: RowLabelProps): ReactElement {
     return (
         <th
-            className={twMerge('overflow-hidden pr-2 pl-6 text-right align-middle', !visible && 'w-0 p-0', className)}
+            className={mergeClasses(
+                'overflow-hidden pr-2 pl-6 text-right align-middle',
+                !visible && 'w-0 p-0',
+                className,
+            )}
             scope="row"
         >
             {visible && row.kind === 'value' ? (
@@ -69,7 +73,7 @@ export function BoardGrid({
     const rows = boardRows({ labelLaneVisible, showsCountdown, onRequestReset });
 
     return (
-        <div ref={regionRef} className={twMerge('min-h-0 flex-1 overflow-hidden', className)}>
+        <div ref={regionRef} className={mergeClasses('min-h-0 flex-1 overflow-hidden', className)}>
             <table className="size-full table-fixed border-collapse">
                 <caption className="sr-only">Exam sessions</caption>
                 <colgroup>
@@ -105,7 +109,7 @@ export function BoardGrid({
                                 return (
                                     <td
                                         key={column.id}
-                                        className={twMerge(
+                                        className={mergeClasses(
                                             row.cellClassesFor(column),
                                             separated && 'border-linguaskill-slate-100 border-r border-dashed',
                                         )}

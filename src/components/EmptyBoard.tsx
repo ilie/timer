@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Plus } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 
 type EmptyBoardProps = {
@@ -11,7 +11,7 @@ type EmptyBoardProps = {
 export function EmptyBoard({ onAddSession, className }: EmptyBoardProps): ReactElement {
     return (
         <div
-            className={twMerge(
+            className={mergeClasses(
                 'text-linguaskill-slate-500 flex h-full flex-col items-center justify-center gap-6',
                 className,
             )}

@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from 'react';
 import type { FormEvent, MouseEvent, ReactElement, ReactNode } from 'react';
 import { Check, TriangleAlert, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { Button } from './UI/Button';
 
 type ModalDialogProps = {
@@ -85,7 +85,7 @@ export function ModalDialog({
     return (
         <dialog
             ref={dialogRef}
-            className={twMerge(
+            className={mergeClasses(
                 'border-linguaskill-slate-200 text-linguaskill-slate-900 backdrop:bg-linguaskill-slate-950/40 m-auto w-[min(92vw,42rem)] rounded-2xl border bg-white p-0 shadow-2xl',
                 className,
             )}

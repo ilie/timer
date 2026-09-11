@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { BoardValue } from './BoardValue';
 import { ExamName } from './ExamName';
 import { RemainingTime } from './RemainingTime';
@@ -47,8 +47,8 @@ export function fillsCell(row: BoardRow, column: SessionView | undefined): boole
 
 export function boardRows({ labelLaneVisible, showsCountdown, onRequestReset }: RowContext): BoardRow[] {
     const alignment = labelLaneVisible ? 'text-left' : 'text-center';
-    const valueCell = twMerge('overflow-hidden px-6 align-middle', alignment);
-    const controlsCell = twMerge('px-6 align-middle', alignment);
+    const valueCell = mergeClasses('overflow-hidden px-6 align-middle', alignment);
+    const controlsCell = mergeClasses('px-6 align-middle', alignment);
     const perColumnLabel = (label: string): string | null => (labelLaneVisible ? null : label);
 
     const supporting: BoardRow[] = [

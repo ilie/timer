@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../lib/mergeClasses';
 import { BoardValue } from './BoardValue';
 import { useNow } from '../hooks/useNow';
 import { remainingSegments, reservationSegments } from '../lib/format';
@@ -61,7 +61,7 @@ export function RemainingTime({
         <BoardValue label={label} className={className}>
             <span
                 data-state={threshold}
-                className={twMerge(
+                className={mergeClasses(
                     'group/countdown text-vlec-blue-900 inline-grid grid-cols-1 grid-rows-1 tabular-nums',
                     'data-[state=critical]:text-vlec-red-700 data-[state=zero]:text-vlec-red-700 data-[state=warning]:text-amber-700',
                     align === 'start' ? 'justify-items-start' : 'justify-items-center',

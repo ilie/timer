@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge';
+import { mergeClasses } from '../../lib/mergeClasses';
 import type { ReactElement } from 'react';
 
 type FooterProps = {
@@ -9,7 +9,7 @@ function Footer({ className }: FooterProps): ReactElement {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className={twMerge('shrink-0 bg-white px-8 py-2', className)}>
+        <footer className={mergeClasses('shrink-0 bg-white px-8 py-2', className)}>
             <p>
                 <a
                     className="text-linguaskill-slate-500 hover:text-linguaskill-slate-700 text-sm no-underline transition-colors"
